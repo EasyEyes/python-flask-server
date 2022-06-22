@@ -42,3 +42,6 @@ def task_handler(task):
         return resp
     else:
         return 'Content-Type not supported'
+    
+if __name__ == '__main__':
+    app.run()
