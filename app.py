@@ -7,18 +7,18 @@ CORS(app)
 
 def run_impulse_response_task(request_json):
     if "payload" not in request_json:
-        return False, "Request Body is missing a 'payload' entry"
+        return 400, "Request Body is missing a 'payload' entry"
     if "sample-rate" not in request_json:
-        return False, "Request Body us missing a 'sample-rate' entry"
+        return 400, "Request Body us missing a 'sample-rate' entry"
     if "P" not in request_json:
-        return False, "Request Body us missing a 'P' entry"
+        return 400, "Request Body us missing a 'P' entry"
     
     recordedSignals = request_json["payload"]
     sampleRate = request_json["sample-rate"]
     P = request_json["P"]
     result = run_ir_task(recordedSignals, P, sampleRate)
     
-    return True, {
+    return 200, {
         "inverted-impulse-response": result
     }
 
