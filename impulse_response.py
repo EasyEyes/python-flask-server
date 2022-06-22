@@ -269,7 +269,8 @@ def estimate_samples_per_mls_(output_signal, num_periods, plot=False):
     ouptut_autocorrelation = ifft(output_spectrum .* conj(output_spectrum), 'symmetric');
     % ouptut_autocorrelation corresponds to Fig.5 of the paper. 
     '''
-    output_spectrum = np.array(fft(output_signal), dtype=complex)
+    
+    # output_spectrum = np.array(fft(output_signal), dtype=complex)
     ouptut_autocorrelation = np.array(signal.correlate(output_signal, output_signal, mode='full'), dtype=complex)
     
     # Find the second-order differences
@@ -456,9 +457,10 @@ def run_ir_task(recordedSignals, P=P, sampleRate=96000, NUM_PERIODS=3):
     all_irs = []
     
     for sig in recordedSignals:
+        sig = np.array(sig)
+        
         b, a = signal.butter(3, np.array([12e3,20e3])/(sampleRate//2), 'bandpass')
         inpFilt = signal.filtfilt(b, a, sig)
-        
         inpFilt = inpFilt[P+1:]
         
         fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, plot=False)
@@ -469,19 +471,7 @@ def run_ir_task(recordedSignals, P=P, sampleRate=96000, NUM_PERIODS=3):
     ir = np.mean(all_irs, axis=0)
     g, _ = compute_filter_g(ir, plot=False)
     
-    # fig, ax_ir = plt.subplots(1, 1, figsize=(4.8, 4.8))
-    # colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'black']
-    
-    # for i, ir_cur in enumerate(all_irs):
-    #     ax_ir.plot(ir_cur, color=colors[i])
-        
-    # ax_ir.plot(ir, color='black', label='Average')
-    # plt.show()
-    
-    # for sig in recordedSignals:
-    #     recovered = recover_signal(generatedSignal, sig, g, ir, plot=True)
-    
-    return g
+    return g.real.tolist()
 
 if __name__ == '__main__':
     args = parser.parse_args()

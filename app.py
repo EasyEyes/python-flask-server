@@ -1,6 +1,6 @@
 from flask import Flask, request, make_response
+from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
-from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
@@ -31,12 +31,13 @@ SUPPORTED_TASKS = {
 }
 
 @app.route("/task/<string:task>", methods=['POST'])
+@cross_origin()
 def task_handler(task):
     if task not in SUPPORTED_TASKS:
         return 'ERROR'
     content_type = request.headers.get('Content-Type')
     if (content_type == 'application/json'):
-        json = request.json
+        json = request.get_json()
         headers = {"Content-Type": "application/json"}
         status, result = SUPPORTED_TASKS[task](json)
         resp = make_response(result, status)
