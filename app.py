@@ -1,7 +1,9 @@
 from flask import Flask, request, make_response
 from impulse_response import run_ir_task
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 def run_impulse_response_task(request_json):
     if "payload" not in request_json:
