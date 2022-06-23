@@ -1,53 +1,8 @@
-import sys
+
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.fft import fft, fftfreq, ifft, rfft, irfft
-from scipy import signal
-from utils import parser
+from scipy.fft import fft, ifft, rfft, irfft
+from scipy.signal import convolve, correlate, butter, filtfilt
 
-sampleRate = 96000
-N = 18
-P = (1 << N) - 1
-
-# ---- Plot Settings ----
-PLOT_FONT_SIZE = 10
-# plt.style.use(''')
-plt.rcParams.update({'font.size': PLOT_FONT_SIZE})
-
-
-def make_stem(ax, x, y, **kwargs):
-    ax.axhline(x[0], x[-1], 0, color='r')
-
-    ax.vlines(x, 0, y, color='b')
-
-    ax.set_ylim([1.05*y.min(), 1.05*y.max()])
-
-
-def samples_to_miliseconds(num_samples, sample_rate=sampleRate):
-    elapsed_time = (num_samples / (sample_rate * 1000)) * 1000
-    return np.linspace(0, elapsed_time, num_samples)
-
-
-def plotPerm(buffer, subsample=False):
-    plt.style.use('seaborn')
-
-    if subsample == False:
-        subsample = len(buffer)
-
-    max_time = len(buffer) / sampleRate
-    time_steps = np.linspace(0, max_time, len(buffer))
-
-    yf = fft(generatedSignal)
-    xf = fftfreq(P, 1/sampleRate)
-
-    plt.plot(xf, np.abs(yf), linewidth=1.0)
-    plt.show()
-
-
-def getTimeSteps(signal):
-    max_time = len(signal) / sampleRate
-    time_steps = np.linspace(0, max_time, len(signal))
-    return time_steps
 
 '''
 -----------------------------------------------------------------------------------------------------------------------
@@ -70,46 +25,6 @@ def compute_filter_g(h, plot=False):
     num_to_roll = n//2
     g_rolled = g
     # g_rolled = np.roll(g, num_to_roll)
-
-    if plot:
-        fs = 10  # Hz
-        t = samples_to_miliseconds(n, fs)
-
-        fig, (ax_H, ax_h, ax_G_copy, ax_g_copy, ax_G,
-              ax_g) = plt.subplots(6, 1, figsize=(6.8, 6.8))
-
-        ax_H.plot(t, H, label='H')
-        ax_H.set_title('H')
-        ax_H.set_xlabel('Time [ms]')
-        ax_H.set_ylabel('Amplitude')
-
-        ax_G_copy.plot(t, G_copy, label='G (Copy)')
-        ax_G_copy.set_title('G (Copy)')
-        ax_G_copy.set_xlabel('Frequency')
-        ax_G_copy.set_ylabel('Amplitude')
-
-        ax_G.plot(t, G, label='G')
-        ax_G.set_title('G (Inverted)')
-        ax_G.set_xlabel('Time [ms]')
-        ax_G.set_ylabel('Amplitude')
-
-        ax_h.plot(t, h, label='h')
-        ax_h.set_title('h')
-        ax_h.set_xlabel('Time [ms]')
-        ax_h.set_ylabel('Amplitude')
-
-        ax_g_copy.plot(t, g_copy, label='g')
-        ax_g_copy.set_title('g (copy)')
-        ax_g_copy.set_xlabel('Time [ms]')
-        ax_g_copy.set_ylabel('Amplitude')
-
-        ax_g.plot(t, g_rolled, label='g')
-        ax_g.set_title('g (Inverted)')
-        ax_g.set_xlabel('Time [ms]')
-        ax_g.set_ylabel('Amplitude')
-
-        fig.tight_layout()
-        plt.show()
 
     return g_rolled, G
 
@@ -136,104 +51,12 @@ def compute_filter_g_(h, plot=False):
     G_copy = H
     g_copy = h
 
-    if plot:
-        fs = 10  # Hz
-        t = samples_to_miliseconds(n, fs)
-
-        fig, (ax_H, ax_h, ax_G_copy, ax_g_copy, ax_G,
-              ax_g) = plt.subplots(6, 1, figsize=(6.8, 6.8))
-
-        ax_H.plot(t, H, label='H')
-        ax_H.set_title('H')
-        ax_H.set_xlabel('Time [ms]')
-        ax_H.set_ylabel('Amplitude')
-
-        ax_G_copy.plot(t, G_copy, label='G (Copy)')
-        ax_G_copy.set_title('G (Copy)')
-        ax_G_copy.set_xlabel('Frequency')
-        ax_G_copy.set_ylabel('Amplitude')
-
-        ax_G.plot(t, G, label='G')
-        ax_G.set_title('G (Inverted)')
-        ax_G.set_xlabel('Time [ms]')
-        ax_G.set_ylabel('Amplitude')
-
-        ax_h.plot(t, h, label='h')
-        ax_h.set_title('h')
-        ax_h.set_xlabel('Time [ms]')
-        ax_h.set_ylabel('Amplitude')
-
-        ax_g_copy.plot(t, g_copy, label='g')
-        ax_g_copy.set_title('g (copy)')
-        ax_g_copy.set_xlabel('Time [ms]')
-        ax_g_copy.set_ylabel('Amplitude')
-
-        ax_g.plot(t, g, label='g')
-        ax_g.set_title('g (Inverted)')
-        ax_g.set_xlabel('Time [ms]')
-        ax_g.set_ylabel('Amplitude')
-
-        fig.tight_layout()
-        plt.show()
-
     return g, G
 
 
 def recover_signal(s, v, g, h, plot=False):
-    g_filtered = signal.convolve(s, g, mode='full')
-    h_filtered = signal.convolve(g_filtered, h, mode='full')
-
-    if plot:
-        fs = 10  # Hz
-        t = samples_to_miliseconds(len(s), fs)
-
-        _, ax_s = plt.subplots()
-        s_ss = len(s)
-        ax_s.plot(t[:s_ss], s[:s_ss])
-        ax_s.set_xlabel(f'Time [ms], {s_ss} samples')
-        ax_s.set_ylabel('Amplitude')
-        ax_s.set_title('Original Signal (s)')
-
-        _, ax_v = plt.subplots()
-        v_ss = len(v)
-        ax_v.plot(v[:v_ss])
-        ax_v.set_xlabel(f'Time [ms], {v_ss} samples')
-        ax_v.set_ylabel('Amplitude')
-        ax_v.set_title('Output Signal v (v = h * s), * denotes convolution')
-
-        _, ax_h = plt.subplots()
-        h_ss = len(h)
-        ax_h.plot( h[:h_ss])
-        ax_h.set_xlabel(f'Time [ms], {h_ss} samples')
-        ax_h.set_ylabel('Amplitude')
-        ax_h.set_title('Impulse Response h (h = ifft( fft(v) / fft(s) ))')
-
-        _, ax_g = plt.subplots()
-        g_ss = 10000
-        ax_g.plot(g)
-        ax_g.set_xlabel(f'Time [ms], {g_ss} samples')
-        ax_g.set_ylabel('Amplitude')
-        ax_g.set_title('Inverted Impulse Response g')
-
-        _, ax_g_filtered = plt.subplots()
-        g_filtered_ss = len(t)
-        ax_g_filtered.plot(g_filtered, color='black')
-        ax_g_filtered.set_xlabel(f'Time [ms], {g_filtered_ss} samples')
-        ax_g_filtered.set_ylabel('Amplitude')
-        ax_g_filtered.set_title('Signal sg (sg = g * s), * denotes convolution')
-
-        _, ax_h_filtered = plt.subplots()
-        h_filtered_ss = len(t)
-        ax_h_filtered.plot(h_filtered, color='black')
-        ax_h_filtered.set_xlabel(
-            f'Time [ms], {h_filtered_ss} samples')
-        ax_h_filtered.set_ylabel('Amplitude')
-        ax_h_filtered.set_title(
-            'Signal sgh (sgh = g * s * h), * denotes convolution')
-
-        #plot_spectrum(g, fs, t)
-
-        plt.show()
+    g_filtered = convolve(s, g, mode='full')
+    h_filtered = convolve(g_filtered, h, mode='full')
 
     return h_filtered
 
@@ -260,7 +83,7 @@ def ifft_sym(sig):
         return ifft(sig, n=n)
 
 
-def estimate_samples_per_mls_(output_signal, num_periods, plot=False):
+def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, plot=False):
     '''
     % 1.1) calculate the autocorrelation of several periods of measured MLS signal
 
@@ -270,7 +93,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, plot=False):
     '''
     
     # output_spectrum = np.array(fft(output_signal), dtype=complex)
-    ouptut_autocorrelation = np.array(signal.correlate(output_signal, output_signal, mode='full'), dtype=complex)
+    ouptut_autocorrelation = np.array(correlate(output_signal, output_signal, mode='full'), dtype=complex)
     
     # Find the second-order differences
     inflection = np.diff(np.sign(np.diff(ouptut_autocorrelation)))
@@ -278,13 +101,6 @@ def estimate_samples_per_mls_(output_signal, num_periods, plot=False):
     peaks_idx_sorted = np.argsort(ouptut_autocorrelation[peaks])
     peak_1_idx = peaks[peaks_idx_sorted[-1]]
     ouptut_autocorrelation[peak_1_idx] = 0
-    
-    if plot:
-        fig, ax_auto = plt.subplots()
-        ax_auto.plot(ouptut_autocorrelation, color='blue')
-        ax_auto.plot(peaks, ouptut_autocorrelation[peaks], 'o', color='red')
-        ax_auto.plot(peaks[np.argmax(ouptut_autocorrelation[peaks])], np.max(ouptut_autocorrelation[peaks]), 'o', color='yellow')
-        plt.show()
 
     '''
     % 1.2) % find the period of ouptut_autocorrelation (locate the second peak)
@@ -315,13 +131,12 @@ def estimate_samples_per_mls_(output_signal, num_periods, plot=False):
     % new sample rate (Eq. (7) of the paper)
     fs2 = fs * L_new_n/(n_periods*L);
     '''
-    fs = sampleRate
-    fs2 = fs * L_new_n / (num_periods * L_new)
+    fs2 = sampleRate * L_new_n / (num_periods * L_new)
     
     return fs2, L_new_n, dL_n
 
 
-def estimate_samples_per_mls(output_signal, num_periods, plot=False):
+def estimate_samples_per_mls(output_signal, num_periods, sampleRate, plot=False):
     '''
     % 1.1) calculate the autocorrelation of several periods of measured MLS signal
 
@@ -334,12 +149,6 @@ def estimate_samples_per_mls(output_signal, num_periods, plot=False):
     ouptut_autocorrelation = ifft_sym(prod)
     
     ouptut_autocorrelation[0:10] = 0
-    
-    if plot:
-        _, ax_corr = plt.subplots()
-        ax_corr.plot(ouptut_autocorrelation, color='blue')
-        ax_corr.plot(output_signal, color='red')
-        plt.show()
 
     '''
     % 1.2) % find the period of ouptut_autocorrelation (locate the second peak)
@@ -373,8 +182,7 @@ def estimate_samples_per_mls(output_signal, num_periods, plot=False):
     % new sample rate (Eq. (7) of the paper)
     fs2 = fs * L_new_n/(n_periods*L);
     '''
-    fs = sampleRate
-    fs2 = fs * L_new_n / (num_periods * L_new)
+    fs2 = sampleRate * L_new_n / (num_periods * L_new)
     
     return fs2, L_new_n, dL_n
 
@@ -438,12 +246,6 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2, plot=False):
     # ir = ifft(prod[0:right_idx]) / (L * 2)
     ir = fft_sym(prod) / (L * 2)
     
-    if plot:
-        frequency_axis = np.linspace(0, fs2, len(ir))
-        _, ax_ir = plt.subplots()
-        ax_ir.plot(frequency_axis, ir)
-        plt.show()
-    
     return ir
 
 
@@ -452,14 +254,14 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2, plot=False):
 Tests
 '''
 
-def run_ir_task(recordedSignals, P=P, sampleRate=96000, NUM_PERIODS=3):
+def run_ir_task(recordedSignals, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3):
     all_irs = []
     
     for sig in recordedSignals:
         sig = np.array(sig)
         
-        b, a = signal.butter(3, np.array([12e3,20e3])/(sampleRate//2), 'bandpass')
-        inpFilt = signal.filtfilt(b, a, sig)
+        b, a = butter(3, np.array([12e3,20e3])/(sampleRate//2), 'bandpass')
+        inpFilt = filtfilt(b, a, sig)
         inpFilt = inpFilt[P+1:]
         
         fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, plot=False)
@@ -471,20 +273,3 @@ def run_ir_task(recordedSignals, P=P, sampleRate=96000, NUM_PERIODS=3):
     g, _ = compute_filter_g(ir, plot=False)
     
     return g.real.tolist()
-
-if __name__ == '__main__':
-    args = parser.parse_args()
-    
-    # Sample rate of the original signal
-    globals()['sampleRate'] = args.sampleRate or 96000
-    debug = args.debug  # Print debug info
-    prod = not debug
-    
-    if prod:
-        g = run(recordedSignals, P)
-        res = ','.join(str(i.real) for i in g)
-        
-        print(res)
-        sys.stdout.flush()  # flush the buffer
-    else:
-        g = run(recordedSignals, P)

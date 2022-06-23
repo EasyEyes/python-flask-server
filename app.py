@@ -1,9 +1,18 @@
+import gc
+import os
+import tracemalloc
+
+import psutil
+
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
 
 app = Flask(__name__)
 CORS(app)
+
+process = psutil.Process(os.getpid())
+tracemalloc.start()
 
 def run_impulse_response_task(request_json):
     if "payload" not in request_json:
@@ -46,5 +55,24 @@ def task_handler(task):
     else:
         return 'Content-Type not supported'
     
+@app.route('/memory')
+@cross_origin()
+def print_memory():
+    return {'memory': process.memory_info().rss}    
+
+@app.route("/snapshot")
+@cross_origin()
+def snap():
+    global s
+    if not s:
+        s = tracemalloc.take_snapshot()
+        return "taken snapshot\n"
+    else:
+        lines = []
+        top_stats = tracemalloc.take_snapshot().compare_to(s, 'lineno')
+        for stat in top_stats[:5]:
+            lines.append(str(stat))
+        return "\n".join(lines)
+
 if __name__ == '__main__':
     app.run()
