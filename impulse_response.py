@@ -1,4 +1,3 @@
-
 import numpy as np
 from scipy.fft import fft, ifft, rfft, irfft
 from scipy.signal import convolve, correlate, butter, filtfilt
@@ -19,14 +18,12 @@ def compute_filter_g(h, plot=False):
     g_copy = ifft(G_copy)
 
     G = (1/magnitudes) * np.exp(1j * (-1 * phases))
-    G[magnitudes == 0] = 0
+    # G[magnitudes == 0] = 0
     g = ifft(G)
  
-    num_to_roll = n//2
-    g_rolled = g
-    # g_rolled = np.roll(g, num_to_roll)
+    g = 2.*(g - np.min(g))/np.ptp(g)-1
 
-    return g_rolled, G
+    return g 
 
 
 def compute_filter_g_(h, plot=False):
@@ -208,7 +205,7 @@ def adjust_mls_length(output_signal, num_periods, L, L_new_n, dL_n):
     if dL_n < 0:
         cut = (len(MLS_ADJUST) // 2) + 1
         OUT_MLS2_n = np.zeros(num_periods * L_new_n)
-        OUT_MLS2_n[0:cut] = MLS_ADJUST[0:cut]
+        OUT_MLS2_n[0:cut] = MLS_ADJUST[0:cut].real
     else:
         OUT_MLS2_n = MLS_ADJUST[0:num_periods * L]
     
@@ -248,7 +245,6 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2, plot=False):
     
     return ir
 
-
 '''
 -----------------------------------------------------------------------------------------------------------------------
 Tests
@@ -258,7 +254,7 @@ def run_ir_task(recordedSignals, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3)
     all_irs = []
     
     for sig in recordedSignals:
-        sig = np.array(sig)
+        sig = np.array(sig, dtype=np.float32)
         
         b, a = butter(3, np.array([12e3,20e3])/(sampleRate//2), 'bandpass')
         inpFilt = filtfilt(b, a, sig)
@@ -270,6 +266,10 @@ def run_ir_task(recordedSignals, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3)
         all_irs.append(ir)
     
     ir = np.mean(all_irs, axis=0)
-    g, _ = compute_filter_g(ir, plot=False)
+    g = compute_filter_g(ir, plot=False)
+    
+    recordedSignals = None
+    ir = None
+    all_irs = None
     
     return g.real.tolist()
