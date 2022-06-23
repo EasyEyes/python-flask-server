@@ -1,14 +1,57 @@
 import numpy as np
 from scipy.fft import fft, ifft, rfft, irfft
 from scipy.signal import convolve, correlate, butter, filtfilt
-from json_tricks import dumps
 
 
 '''
 -----------------------------------------------------------------------------------------------------------------------
 From Denis
 '''   
-def recover_signal(s, v, g, h):
+
+def compute_filter_g(h, plot=False):
+    n = len(h)
+    H = fft(h, )
+    magnitudes = np.abs(H)
+    phases = np.arctan2(H.imag, H.real)
+
+    G_copy = magnitudes * np.exp(1j * phases)
+    g_copy = ifft(G_copy)
+
+    G = (1/magnitudes) * np.exp(1j * (-1 * phases))
+    # G[magnitudes == 0] = 0
+    g = ifft(G)
+ 
+    g = 2.*(g - np.min(g))/np.ptp(g)-1
+
+    return g 
+
+
+def compute_filter_g_(h, plot=False):
+    H = fft(h)
+    n = len(h)
+
+    C = np.log(np.abs(H))
+    c = ifft(C, n=n)
+
+    m = np.empty(n, dtype=complex)
+    m[0] = c[0]
+    m[n//2] = c[n//2]
+    m[1:n//2] = 2 * c[1:n//2]
+    m[n//2:] = 0
+
+    M = fft(m, n=n)
+    Mk = np.exp(M)
+
+    G = 1/Mk
+    g = ifft(G, n=n)
+
+    G_copy = H
+    g_copy = h
+
+    return g, G
+
+
+def recover_signal(s, v, g, h, plot=False):
     g_filtered = convolve(s, g, mode='full')
     h_filtered = convolve(g_filtered, h, mode='full')
 
@@ -37,7 +80,7 @@ def ifft_sym(sig):
         return ifft(sig, n=n)
 
 
-def estimate_samples_per_mls_(output_signal, num_periods, sampleRate):
+def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, plot=False):
     '''
     % 1.1) calculate the autocorrelation of several periods of measured MLS signal
 
@@ -90,7 +133,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate):
     return fs2, L_new_n, dL_n
 
 
-def estimate_samples_per_mls(output_signal, num_periods, sampleRate):
+def estimate_samples_per_mls(output_signal, num_periods, sampleRate, plot=False):
     '''
     % 1.1) calculate the autocorrelation of several periods of measured MLS signal
 
@@ -169,7 +212,7 @@ def adjust_mls_length(output_signal, num_periods, L, L_new_n, dL_n):
     return OUT_MLS2_n
 
 
-def compute_impulse_resp(OUT_MLS2_n, L, fs2):
+def compute_impulse_resp(OUT_MLS2_n, L, fs2, plot=False):
     '''
     % apply the ifft with Hermitian symmetry
     out_mls2_n = ifft(OUT_MLS2_n, 'symmetric');
@@ -207,16 +250,26 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2):
 Tests
 '''
 
-def run_ir_task(sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3):
-    sig = np.array(sig, dtype=np.float32)
+def run_ir_task(recordedSignals, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3):
+    all_irs = []
     
-    b, a = butter(3, np.array([12e3,20e3])/(sampleRate//2), 'bandpass')
-    inpFilt = filtfilt(b, a, sig)
-    inpFilt = inpFilt[P+1:]
+    for sig in recordedSignals:
+        sig = np.array(sig, dtype=np.float32)
+        
+        b, a = butter(3, np.array([12e3,20e3])/(sampleRate//2), 'bandpass')
+        inpFilt = filtfilt(b, a, sig)
+        inpFilt = inpFilt[P+1:]
+        
+        fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, sampleRate, plot=False)
+        OUT_MLS2_n = adjust_mls_length(inpFilt, NUM_PERIODS, P, L_new_n, dL_n)
+        ir = compute_impulse_resp(OUT_MLS2_n, P, fs2, plot=False)
+        all_irs.append(ir)
     
-    fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, sampleRate)
-    OUT_MLS2_n = adjust_mls_length(inpFilt, NUM_PERIODS, P, L_new_n, dL_n)
-    ir = compute_impulse_resp(OUT_MLS2_n, P, fs2)
+    ir = np.mean(all_irs, axis=0)
+    g = compute_filter_g(ir, plot=False)
     
-    return dumps({ "impulse-response": ir })
+    # recordedSignals = None
+    # ir = None
+    # all_irs = None
     
+    return g.real.tolist()

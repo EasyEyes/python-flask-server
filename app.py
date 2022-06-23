@@ -6,6 +6,7 @@ import psutil
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
+from inverted_impulse_response import run_iir_task
 
 app = Flask(__name__)
 CORS(app)
@@ -13,7 +14,7 @@ CORS(app)
 process = psutil.Process(os.getpid())
 tracemalloc.start()
 
-def run_impulse_response_task(request_json):
+def handle_impulse_response_task(request_json, task):
     if "payload" not in request_json:
         return 400, "Request Body is missing a 'payload' entry"
     if "sample-rate" not in request_json:
@@ -21,21 +22,31 @@ def run_impulse_response_task(request_json):
     if "P" not in request_json:
         return 400, "Request Body us missing a 'P' entry"
     
-    recordedSignals = request_json["payload"]
+    recordedSignalsJson = request_json["payload"]
     sampleRate = request_json["sample-rate"]
     P = request_json["P"]
-    result = run_ir_task(recordedSignals, P, sampleRate)
+    result = run_ir_task(recordedSignalsJson, P, sampleRate)
     
     return 200, {
-        "inverted-impulse-response": result
+        str(task): result
     }
 
-def run_volume_task(request_json):
+def handle_inverse_impulse_response_task(request_json, task):
+    if "payload" not in request_json:
+        return 400, "Request Body is missing a 'payload' entry"
+    impulseResponsesJson = request_json["payload"]
+    result = run_iir_task(impulseResponsesJson)
+    return 200, {
+        str(task): result
+    }
+
+def handle_volume_task(request_json):
     return ''
 
 SUPPORTED_TASKS = {
-    'impulse-response': run_impulse_response_task,
-    'volume': run_volume_task
+    'impulse-response': handle_impulse_response_task,
+    'inverse-impulse-response': handle_inverse_impulse_response_task,
+    'volume': handle_volume_task
 }
 
 @app.route("/task/<string:task>", methods=['POST'])
@@ -47,7 +58,7 @@ def task_handler(task):
     if (content_type == 'application/json'):
         json = request.get_json()
         headers = {"Content-Type": "application/json"}
-        status, result = SUPPORTED_TASKS[task](json)
+        status, result = SUPPORTED_TASKS[task](json, task)
         resp = make_response(result, status)
         resp.headers = headers
         return resp
