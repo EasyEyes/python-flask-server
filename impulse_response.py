@@ -264,7 +264,7 @@ def run_ir_task(recordedSignals, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3)
         inpFilt = filtfilt(b, a, sig)
         inpFilt = inpFilt[P+1:]
         
-        fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, plot=False)
+        fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, sampleRate, plot=False)
         OUT_MLS2_n = adjust_mls_length(inpFilt, NUM_PERIODS, P, L_new_n, dL_n)
         ir = compute_impulse_resp(OUT_MLS2_n, P, fs2, plot=False)
         all_irs.append(ir)
