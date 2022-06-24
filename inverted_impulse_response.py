@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.fft import fft, ifft
 from json_tricks import loads
+from pickle import loads
 
 
 def compute_filter_g_(h):
@@ -43,10 +44,7 @@ def compute_filter_g(h):
 
 
 def run_iir_task(impulse_responses_json):
-    # print('run_iir_task')
-    # print(impulse_responses_json)
-    impulseResponses = [loads(ir_json)['impulse-response'] for ir_json in impulse_responses_json]
-    # print(impulseResponses)
+    impulseResponses = [loads(bytes(ir_json, 'latin1')) for ir_json in impulse_responses_json]
     ir = np.mean(impulseResponses, axis=0)
     g = compute_filter_g(ir)
     return g.tolist()

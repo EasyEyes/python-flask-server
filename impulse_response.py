@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.fft import fft, ifft, rfft, irfft
 from scipy.signal import convolve, correlate, butter, filtfilt
-from json_tricks import dumps
+from pickle import dumps
 
 
 '''
@@ -217,6 +217,6 @@ def run_ir_task(sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3):
     fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, sampleRate)
     OUT_MLS2_n = adjust_mls_length(inpFilt, NUM_PERIODS, P, L_new_n, dL_n)
     ir = compute_impulse_resp(OUT_MLS2_n, P, fs2)
-    
-    return dumps({ "impulse-response": ir })
+
+    return str(dumps(ir), encoding="latin1")
     
