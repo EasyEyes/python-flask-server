@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.fft import fft, ifft
-from json_tricks import loads
 from pickle import loads
 
 
