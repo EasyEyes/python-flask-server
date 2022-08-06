@@ -32,18 +32,15 @@ def compute_filter_g(h):
     magnitudes = np.abs(H)
     phases = np.arctan2(H.imag, H.real)
 
-    # G_copy = magnitudes * np.exp(1j * phases)
-    # g_copy = ifft(G_copy)
-
     G = (1/magnitudes) * np.exp(1j * (-1 * phases))
     G[magnitudes == 0] = 0
     g = ifft(G).real
  
-    return 2.*(g - np.min(g))/np.ptp(g)-1
+    return g #2.*(g - np.min(g))/np.ptp(g)-1
 
 
-def run_iir_task(impulse_responses_json):
-    impulseResponses = [loads(bytes(ir_json, 'latin1')) for ir_json in impulse_responses_json]
+def run_iir_task(impulse_responses_json, debug=False):
+    impulseResponses = [loads(bytes(ir_json, 'latin1')) for ir_json in impulse_responses_json] if not debug else impulse_responses_json
     ir = np.mean(impulseResponses, axis=0)
     g = compute_filter_g(ir)
     return g.tolist()

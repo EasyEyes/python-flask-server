@@ -7,6 +7,7 @@ from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
 from inverted_impulse_response import run_iir_task
+from volume import run_volume_task
 
 app = Flask(__name__)
 CORS(app)
@@ -40,8 +41,18 @@ def handle_inverse_impulse_response_task(request_json, task):
         str(task): result
     }
 
-def handle_volume_task(request_json):
-    return ''
+def handle_volume_task(request_json, task):
+    if "payload" not in request_json:
+        return 400, "Request Body is missing a 'payload' entry"
+    if "sample-rate" not in request_json:
+        return 400, "Request Body us missing a 'sample-rate' entry"
+    recordedSignalJson = request_json["payload"]
+    sampleRate = request_json["sample-rate"]
+    soundGainDbSPL, _, _, _ = run_volume_task(recordedSignalJson, sampleRate)
+    return 200, {
+        str(task): soundGainDbSPL
+    }
+
 
 SUPPORTED_TASKS = {
     'impulse-response': handle_impulse_response_task,

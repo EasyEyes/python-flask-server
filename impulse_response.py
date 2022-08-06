@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.fft import fft, ifft, rfft, irfft
-from scipy.signal import convolve, correlate, butter, filtfilt
 from pickle import dumps
 
 
@@ -8,11 +7,34 @@ from pickle import dumps
 -----------------------------------------------------------------------------------------------------------------------
 From Denis
 '''   
-def recover_signal(s, v, g, h):
-    g_filtered = convolve(s, g, mode='full')
-    h_filtered = convolve(g_filtered, h, mode='full')
+def zero_pad_pair(a, b):
+    len_a = len(a)
+    len_b = len(b)
+    if(len_a < len_b):
+        a_new = np.pad(a, (0, len_b - len_b), 'constant')
+        return a_new, b
+    else:
+        b_new = np.pad(b, (0, len_a - len_b), 'constant')
+        return a, b_new
+
+def recover_signal(s, g, h):
+    S = fft_sym(s)
+    G = fft_sym(g)
+    S, G = zero_pad_pair(S, G)
+    G_FILTERED = S * G
+    H = fft_sym(h)
+    G_FILTERED, H = zero_pad_pair(G_FILTERED, H)
+    h_filtered = ifft_sym(G_FILTERED * H)
+    # g_filtered = convolve(s, g, 'same')
+    # h_filtered = convolve(g_filtered, h, 'same')
 
     return h_filtered
+
+def g_filter(s, g):
+    S = fft_sym(s)
+    G = fft_sym(g)
+    S, G = zero_pad_pair(S, G)
+    return ifft_sym(S * G)
 
 '''
 -----------------------------------------------------------------------------------------------------------------------
@@ -37,7 +59,7 @@ def ifft_sym(sig):
         return ifft(sig, n=n)
 
 
-def estimate_samples_per_mls_(output_signal, num_periods, sampleRate):
+def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     '''
     % 1.1) calculate the autocorrelation of several periods of measured MLS signal
 
@@ -47,14 +69,15 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate):
     '''
     
     # output_spectrum = np.array(fft(output_signal), dtype=complex)
-    ouptut_autocorrelation = np.array(correlate(output_signal, output_signal, mode='full'), dtype=complex)
+    output_spectrum = fft(output_signal)
+    output_autocorrelation = ifft_sym(output_spectrum * np.conjugate(output_spectrum))
     
-    # Find the second-order differences
-    inflection = np.diff(np.sign(np.diff(ouptut_autocorrelation)))
-    peaks = (inflection < 0).nonzero()[0] + 1  # Find where they are negative
-    peaks_idx_sorted = np.argsort(ouptut_autocorrelation[peaks])
-    peak_1_idx = peaks[peaks_idx_sorted[-1]]
-    ouptut_autocorrelation[peak_1_idx] = 0
+    # # Find the second-order differences
+    # inflection = np.diff(np.sign(np.diff(ouptut_autocorrelation)))
+    # peaks = (inflection < 0).nonzero()[0] + 1  # Find where they are negative
+    # peaks_idx_sorted = np.argsort(ouptut_autocorrelation[peaks])
+    # peak_1_idx = peaks[peaks_idx_sorted[-1]]
+    # ouptut_autocorrelation[peak_1_idx] = 0
 
     '''
     % 1.2) % find the period of ouptut_autocorrelation (locate the second peak)
@@ -64,8 +87,8 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate):
     % L_new is equal to L + dL (Fig. 5)
     % (dL is delta L)
     '''
-    # ouptut_autocorrelation[0] = 0
-    L_new = np.argmax(ouptut_autocorrelation[:int(ouptut_autocorrelation.shape[0] / 2)])
+    output_autocorrelation[0:L//2] = 0
+    L_new = np.argmax(output_autocorrelation[:output_signal.size//2])
     
     '''
     % find the n-th peak in ouptut_autocorrelation
@@ -74,7 +97,9 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate):
     L_new_n = b + n_periods*(L_new-1) - 1; % L_new_n is L_new of n_periods
     dL_n = L_new_n - n_periods*L;
     '''
-    b = np.argmax(ouptut_autocorrelation[int(L_new - 1):int(L_new + 1)])
+    left = 1*num_periods*(L_new-1)
+    right = num_periods*(L_new+1)
+    b = np.argmax(output_autocorrelation[left:right])
     L_new_n = b + num_periods * (L_new - 1) - 1
     dL_n = L_new_n - num_periods * L_new
 
@@ -177,7 +202,7 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2):
     # N = len(OUT_MLS2_n)
     # right_idx = int(N / 2) + 1
     # out_mls2_n = ifft(OUT_MLS2_n[0:right_idx])
-    out_mls2_n = fft_sym(OUT_MLS2_n)
+    out_mls2_n = ifft_sym(OUT_MLS2_n)
     
     '''
     % take only the 1st period of MLS to plot the results
@@ -207,16 +232,19 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2):
 Tests
 '''
 
-def run_ir_task(sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3):
+def run_ir_task(sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=2, debug=False):
     sig = np.array(sig, dtype=np.float32)
     
-    b, a = butter(3, np.array([12e3,20e3])/(sampleRate//2), 'bandpass')
-    inpFilt = filtfilt(b, a, sig)
-    inpFilt = inpFilt[P+1:]
+    inpFilt = sig[P+1:]
     
-    fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, sampleRate)
+    fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, sampleRate, P)
+    #print(f'fs2: {fs2}, L_new_n {L_new_n}, dL_n: {dL_n}')
     OUT_MLS2_n = adjust_mls_length(inpFilt, NUM_PERIODS, P, L_new_n, dL_n)
+    #print(f'OUT_MLS2_n: {OUT_MLS2_n}')
     ir = compute_impulse_resp(OUT_MLS2_n, P, fs2)
 
-    return str(dumps(ir), encoding="latin1")
+    if debug:
+        return ir
+    else:
+        return str(dumps(ir), encoding="latin1")
     
