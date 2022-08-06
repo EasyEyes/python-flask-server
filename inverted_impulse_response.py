@@ -41,6 +41,11 @@ def compute_filter_g(h):
 
 def run_iir_task(impulse_responses_json, debug=False):
     impulseResponses = [loads(bytes(ir_json, 'latin1')) for ir_json in impulse_responses_json] if not debug else impulse_responses_json
+    smallest = np.Infinity
+    for ir in impulseResponses:
+        if len(ir) < smallest:
+            smallest = len(ir)
+    impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
     ir = np.mean(impulseResponses, axis=0)
     g = compute_filter_g(ir)
     return g.tolist()
