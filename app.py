@@ -7,7 +7,8 @@ from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
 from inverted_impulse_response import run_iir_task
-from volume import run_volume_task
+from volume import run_volume_task,run_volume_task_nonlinear
+from volume import get_model_parameters
 
 app = Flask(__name__)
 CORS(app)
@@ -53,11 +54,37 @@ def handle_volume_task(request_json, task):
         str(task): soundGainDbSPL
     }
 
+def handle_volume_task_nonlinear(request_json, task):
+    if "payload" not in request_json:
+        return 400, "Request Body is missing a 'payload' entry"
+    if "sample-rate" not in request_json:
+        return 400, "Request Body us missing a 'sample-rate' entry"
+    recordedSignalJson = request_json["payload"]
+    sampleRate = request_json["sample-rate"]
+    soundGainDbSPL, _, L, _ = run_volume_task_nonlinear(recordedSignalJson, sampleRate) #L is outDbSPL
+    return 200, {
+        str(task): L
+    }
+
+def handle_volume_parameters(request_json,task):
+    inDB = request_json["inDBValues"]
+    outDBSPL = request_json["outDBSPLValues"]
+    backgroundDBSPL, gainDBSPL, T, R, W = get_model_parameters(inDB,outDBSPL)
+    return 200, {
+        str(task): {
+            "backgroundDBSPL":backgroundDBSPL,
+            "gainDBSPL":gainDBSPL,
+            "T":T,
+            "R":R,
+            "W":W
+            }
+    }
 
 SUPPORTED_TASKS = {
     'impulse-response': handle_impulse_response_task,
     'inverse-impulse-response': handle_inverse_impulse_response_task,
-    'volume': handle_volume_task
+    'volume': handle_volume_task_nonlinear,
+    'volume-parameters': handle_volume_parameters
 }
 
 @app.route("/task/<string:task>", methods=['POST'])
