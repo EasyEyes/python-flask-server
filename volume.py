@@ -48,10 +48,6 @@ def SoundLevelCost(x,inDB,outDBSPL):
     T=x[2]
     R=x[3]
     W=x[4]
-    print("backgroundDbSpl: ", backgroundDbSpl)
-    print("gainDbSpl: ", gainDbSpl)
-    print("inDB: ", inDB)
-    print("outDBSPL: ", outDBSPL)
     cost=0
     for i in range(len(inDB)):
         cost=cost + (outDBSPL[i] - SoundLevelModel(inDB[i],backgroundDbSpl,gainDbSpl,T,R,W))**2
