@@ -27,12 +27,13 @@ def HarmonicPower(wave,fsHz,fHz):
     B = np.mean(np.multiply(cosVector,wave))
     power = 2*(A**2 + B**2)
     outDBSPL1000 = 10 * np.log10(power) + lCalib 
-    return outDBSPL1000, power
+    vectorDb = 10 * np.log10(np.mean(np.square(sinVector))) #power of the digital wave, inDB
+    return outDBSPL1000, power, outDBSPL1000 - vectorDb
 
 def THD(wave, fsHz):
     p = []
     for i in range (1,7):
-        _, power = HarmonicPower(wave, fsHz, 1000*i)
+        _, power, _ = HarmonicPower(wave, fsHz, 1000*i)
         p.append(power)
     distortionPower = sum(p[1:])
     thd = math.sqrt(distortionPower/p[0])
@@ -122,7 +123,8 @@ def run_volume_task_nonlinear(recordedSignalJson, sampleRate):
     sig = np.array(recordedSignalJson, dtype=np.float32)
     sinewave = generateSineWave(sampleRate) # Generate sine wave for comparison
     soundGainDbSPL, P, L, vectorDb = getCalibration(sig, sinewave)
-    outDBSPL1000, P1000 = HarmonicPower(sig,sampleRate,1000)
+    outDBSPL1000, P1000, soundGainDbSPL1000 = HarmonicPower(sig,sampleRate,1000)
     thd, rms = THD(sig,sampleRate)
+
     
-    return soundGainDbSPL, P, L, vectorDb, outDBSPL1000, P1000, thd, rms
+    return soundGainDbSPL, P, L, vectorDb, outDBSPL1000, P1000, thd, rms, soundGainDbSPL1000
