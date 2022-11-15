@@ -12,6 +12,35 @@ targetRange = [3.5, 4.5]  # [min, max] seconds
 lCalib = 104.92978421490648 # for max volume with gain of .04
 
 
+
+def HarmonicPower(wave,fsHz,fHz):
+    #wave is digital sound vector
+    #fsHz is sampling frequency
+    #fHz is freq component we want to extract, e.g. 1000, 2000, 3000
+    #power is mean square of speicifed frequency component, independent of phase
+    #fHz = 1000
+    t = np.arange(len(wave))
+    t = t/fsHz
+    sinVector = np.sin(2*np.pi*t*fHz)
+    cosVector = np.cos(2*np.pi*t*fHz)
+    A = np.mean(np.multiply(sinVector,wave))
+    B = np.mean(np.multiply(cosVector,wave))
+    power = 2*(A**2 + B**2)
+    outDBSPL1000 = 10 * np.log10(power) + lCalib 
+    return outDBSPL1000, power
+
+def THD(wave, fsHz):
+    p = []
+    for i in range (1,7):
+        _, power = HarmonicPower(wave, fsHz, 1000*i)
+        p.append(power)
+    distortionPower = sum(p[1:])
+    thd = math.sqrt(distortionPower/p[0])
+    rms = math.sqrt(p[0])
+    return thd, rms
+
+    
+
 def CompressorDb(inDb,T,R,W):
     if (inDb > (T+W/2)):
         outDb = T + (inDb -T) /R
@@ -71,7 +100,7 @@ def computeLCalib():
 
 def getCalibration(recordedSineTone, sinewave):
     # Power of the recorded signal
-    P = np.mean(np.square(recordedSineTone))
+    P = np.mean(np.square(recordedSineTone)) #this is where power is, keep old way to compare
     L = 10 * np.log10(P) + lCalib  # Sound level in dBSPL = outDBSPL
     vectorDb = 10 * np.log10(np.mean(np.square(sinewave))) #power of the digital wave, inDB
     return L - vectorDb, P, L, vectorDb
@@ -80,6 +109,7 @@ def run_volume_task(recordedSignalJson, sampleRate):
     sig = np.array(recordedSignalJson, dtype=np.float32)
     sinewave = generateSineWave(sampleRate) # Generate sine wave for comparison
     soundGainDbSPL, P, L, vectorDb = getCalibration(sig, sinewave)
+
      
     return soundGainDbSPL, P, L, vectorDb
 
@@ -92,5 +122,7 @@ def run_volume_task_nonlinear(recordedSignalJson, sampleRate):
     sig = np.array(recordedSignalJson, dtype=np.float32)
     sinewave = generateSineWave(sampleRate) # Generate sine wave for comparison
     soundGainDbSPL, P, L, vectorDb = getCalibration(sig, sinewave)
+    outDBSPL1000, P1000 = HarmonicPower(sig,sampleRate,1000)
+    thd, rms = THD(sig,sampleRate)
     
-    return soundGainDbSPL, P, L, vectorDb
+    return soundGainDbSPL, P, L, vectorDb, outDBSPL1000, P1000, thd, rms
