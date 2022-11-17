@@ -70,8 +70,8 @@ def handle_volume_task_nonlinear(request_json, task):
             "power": float(P),
             "power1000": float(P1000),
             "outDbSPL1000": float(L1000),
-            "THD": thd,
-            "RMS": rms,
+            "thd": thd,
+            "rms": rms,
             "soundGainDbSPL1000":soundGainDbSPL1000,
         }
     }
