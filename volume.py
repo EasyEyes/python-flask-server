@@ -52,6 +52,13 @@ def CompressorDb(inDb,T,R,W):
 
     return outDb
 
+def CalculateRMSError(inDBValues,outDBSPLValues,backgroundDBSPL,gainDBSPL,T,R,W):
+    err = []
+    for i in range(0,len(inDBValues)):
+        err.append((outDBSPLValues[i] - SoundLevelModel(inDBValues[i],backgroundDBSPL,gainDBSPL,T,R,W))**2)
+    rmsErrorDBSPL=np.sqrt(np.mean(err))
+    return rmsErrorDBSPL
+
 def CompressorInverseDb(outDb,T,R,W):
 
     if (outDb > (T+(W/2)/R)):
@@ -117,7 +124,8 @@ def run_volume_task(recordedSignalJson, sampleRate):
 def get_model_parameters(inDB,outDBSPL):
     guesses=[70,130,-25,10,40]
     guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL))
-    return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4]
+    rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4])
+    return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError #backgroundDBSPL,gainDBSPL,T,R,W,rmsError
 
 def run_volume_task_nonlinear(recordedSignalJson, sampleRate):
     sig = np.array(recordedSignalJson, dtype=np.float32)

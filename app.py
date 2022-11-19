@@ -65,28 +65,24 @@ def handle_volume_task_nonlinear(request_json, task):
   
     return 200, {
         str(task): {
-            "soundGainDbSPL":soundGainDbSPL,
             "outDbSPL":L,
-            "power": float(P),
-            "power1000": float(P1000),
             "outDbSPL1000": float(L1000),
             "thd": thd,
-            "rms": rms,
-            "soundGainDbSPL1000":soundGainDbSPL1000,
         }
     }
 
 def handle_volume_parameters(request_json,task):
     inDB = request_json["inDBValues"]
     outDBSPL = request_json["outDBSPLValues"]
-    backgroundDBSPL, gainDBSPL, T, R, W = get_model_parameters(inDB,outDBSPL)
+    backgroundDBSPL, gainDBSPL, T, R, W, rmsError = get_model_parameters(inDB,outDBSPL)
     return 200, {
         str(task): {
             "backgroundDBSPL":backgroundDBSPL,
             "gainDBSPL":gainDBSPL,
             "T":T,
             "R":R,
-            "W":W
+            "W":W,
+            "RMSError":rmsError,
             }
     }
 
