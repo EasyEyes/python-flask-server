@@ -107,7 +107,6 @@ def computeLCalib():
     lCalib = 79 - 10 * np.log10(P)
 
 def getCalibration(recordedSineTone, sinewave):
-    print("lcalib: ", lCalib)
     # Power of the recorded signal
     P = np.mean(np.square(recordedSineTone)) #this is where power is, keep old way to compare
     L = 10 * np.log10(P) + lCalib  # Sound level in dBSPL = outDBSPL
