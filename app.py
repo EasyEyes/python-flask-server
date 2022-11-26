@@ -61,7 +61,8 @@ def handle_volume_task_nonlinear(request_json, task):
         return 400, "Request Body us missing a 'sample-rate' entry"
     recordedSignalJson = request_json["payload"]
     sampleRate = request_json["sample-rate"]
-    soundGainDbSPL, P, L, _, L1000, P1000, thd, rms, soundGainDbSPL1000 = run_volume_task_nonlinear(recordedSignalJson, sampleRate) #L is outDbSPL
+    lCalib = request_json["lCalib"]
+    soundGainDbSPL, P, L, _, L1000, P1000, thd, rms, soundGainDbSPL1000 = run_volume_task_nonlinear(recordedSignalJson, sampleRate,lCalib) #L is outDbSPL
   
     return 200, {
         str(task): {
@@ -74,6 +75,7 @@ def handle_volume_task_nonlinear(request_json, task):
 def handle_volume_parameters(request_json,task):
     inDB = request_json["inDBValues"]
     outDBSPL = request_json["outDBSPLValues"]
+    lCalib = request_json["lCalib"]
     backgroundDBSPL, gainDBSPL, T, R, W, rmsError = get_model_parameters(inDB,outDBSPL)
     return 200, {
         str(task): {

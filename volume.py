@@ -107,6 +107,7 @@ def computeLCalib():
     lCalib = 79 - 10 * np.log10(P)
 
 def getCalibration(recordedSineTone, sinewave):
+    print("lcalib: ", lCalib)
     # Power of the recorded signal
     P = np.mean(np.square(recordedSineTone)) #this is where power is, keep old way to compare
     L = 10 * np.log10(P) + lCalib  # Sound level in dBSPL = outDBSPL
@@ -127,12 +128,12 @@ def get_model_parameters(inDB,outDBSPL):
     rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4])
     return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError #backgroundDBSPL,gainDBSPL,T,R,W,rmsError
 
-def run_volume_task_nonlinear(recordedSignalJson, sampleRate):
+def run_volume_task_nonlinear(recordedSignalJson, sampleRate,lCalibFromPeer):
+    global lCalib
+    lCalib = lCalibFromPeer
     sig = np.array(recordedSignalJson, dtype=np.float32)
     sinewave = generateSineWave(sampleRate) # Generate sine wave for comparison
     soundGainDbSPL, P, L, vectorDb = getCalibration(sig, sinewave)
     outDBSPL1000, P1000, soundGainDbSPL1000 = HarmonicPower(sig,sampleRate,1000)
     thd, rms = THD(sig,sampleRate)
-
-    
     return soundGainDbSPL, P, L, vectorDb, outDBSPL1000, P1000, thd, rms, soundGainDbSPL1000
