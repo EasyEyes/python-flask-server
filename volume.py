@@ -75,8 +75,8 @@ def CompressorInverseDb(outDb,T,R,W):
     return inDb
 
 def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W):
-    isolatedOutDbSpl=CompressorDb(inDb,T,R,W)+gainDbSpl
-    outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**(isolatedOutDbSpl/10))
+    totalDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((gainDbSpl+inDb)/10))
+    outDbSpl=CompressorDb(totalDbSpl,T,R,W)
     return outDbSpl
 
 def SoundLevelCost(x,inDB,outDBSPL):
@@ -88,6 +88,9 @@ def SoundLevelCost(x,inDB,outDBSPL):
     cost=0
     for i in range(len(inDB)):
         cost=cost + (outDBSPL[i] - SoundLevelModel(inDB[i],backgroundDbSpl,gainDbSpl,T,R,W))**2
+
+    if W<0:
+        cost = cost + 10*len(inDB)*W**2
 
     return cost
 
@@ -124,7 +127,7 @@ def run_volume_task(recordedSignalJson, sampleRate):
 def get_model_parameters(inDB,outDBSPL,lCalibFromPeer):
     global lCalib
     lCalib = lCalibFromPeer
-    guesses=[70,130,-25,10,40]
+    guesses=[60,125,-10,100,10]
     guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL))
     rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4])
     return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError #backgroundDBSPL,gainDBSPL,T,R,W,rmsError
