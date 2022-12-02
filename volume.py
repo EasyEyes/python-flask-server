@@ -75,8 +75,8 @@ def CompressorInverseDb(outDb,T,R,W):
     return inDb
 
 def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W):
-    totalDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((gainDbSpl+inDb)/10))
-    outDbSpl=CompressorDb(totalDbSpl,T,R,W)
+    outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+gainDbSpl)/10))
+    outDbSpl = CompressorDb(outDbSpl, T, R, W)
     return outDbSpl
 
 def SoundLevelCost(x,inDB,outDBSPL):
