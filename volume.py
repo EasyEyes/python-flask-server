@@ -43,10 +43,11 @@ def THD(wave, fsHz):
     
 
 def CompressorDb(inDb,T,R,W):
-    if (inDb > (T+W/2)):
+    WFinal = W if W >= 0 else 0
+    if (inDb > (T+WFinal/2)):
         outDb = T + (inDb -T) /R
-    elif (inDb > T-W/2):
-        outDb=inDb+(1/R-1)*(inDb-(T-W/2))**2/(2*W)
+    elif (inDb > T-WFinal/2):
+        outDb=inDb+(1/R-1)*(inDb-(T-WFinal/2))**2/(2*WFinal)
     else:
         outDb=inDb
 
@@ -127,7 +128,7 @@ def run_volume_task(recordedSignalJson, sampleRate):
 def get_model_parameters(inDB,outDBSPL,lCalibFromPeer):
     global lCalib
     lCalib = lCalibFromPeer
-    guesses=[70,130,25,100,10]
+    guesses=[60,125,-10,100,10]
     guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL))
     rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4])
     return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError #backgroundDBSPL,gainDBSPL,T,R,W,rmsError
