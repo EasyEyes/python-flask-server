@@ -12,7 +12,7 @@ def zero_pad_pair(a, b):
     len_b = len(b)
     if(len_a < len_b):
         a_new = np.pad(a, (0, len_b - len_b), 'constant')
-        return a_new, b
+        return a_new, b 
     else:
         b_new = np.pad(b, (0, len_a - len_b), 'constant')
         return a, b_new
@@ -69,7 +69,9 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     '''
     
     # output_spectrum = np.array(fft(output_signal), dtype=complex)
+    print(output_signal)
     output_spectrum = fft(output_signal)
+    #print("after output")
     output_autocorrelation = ifft_sym(output_spectrum * np.conjugate(output_spectrum))
     
     # # Find the second-order differences
@@ -123,7 +125,9 @@ def estimate_samples_per_mls(output_signal, num_periods, sampleRate):
     ouptut_autocorrelation = ifft(output_spectrum .* conj(output_spectrum), 'symmetric');
     % ouptut_autocorrelation corresponds to Fig.5 of the paper. 
     '''
+    #print("output before")
     output_spectrum = fft(output_signal)
+    #print("output after")
     prod = output_spectrum * output_spectrum.conj()
     ouptut_autocorrelation = ifft_sym(prod)
     
@@ -209,8 +213,9 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2):
     out_mls2 = out_mls2_n(1+L:2*L);
     OUT_MLS2 = fft(out_mls2);
     '''
+    ###this is taken out to use MLS
     out_mls2 = out_mls2_n[1+L:2*L]
-    OUT_MLS2 = fft(out_mls2)
+    OUT_MLS2 = fft(out_mls2_n)
 
     '''
     % correct Impulse Response
@@ -233,14 +238,17 @@ Tests
 '''
 
 def run_ir_task(sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=2, debug=False):
+  
+
+  
     sig = np.array(sig, dtype=np.float32)
-    
+
     inpFilt = sig[P+1:]
-    
+
     fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, sampleRate, P)
-    #print(f'fs2: {fs2}, L_new_n {L_new_n}, dL_n: {dL_n}')
+
     OUT_MLS2_n = adjust_mls_length(inpFilt, NUM_PERIODS, P, L_new_n, dL_n)
-    #print(f'OUT_MLS2_n: {OUT_MLS2_n}')
+
     ir = compute_impulse_resp(OUT_MLS2_n, P, fs2)
 
     if debug:
