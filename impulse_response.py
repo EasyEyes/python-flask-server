@@ -58,15 +58,28 @@ def ifft_sym(sig):
         # sig = np.roll(sig, -n//2)
         return ifft(sig, n=n)
 
+# this is new, seems to work exactly like matlab's fft symmetrical
+def ifft_sym_(sig):
+    n = len(sig)
+    if n % 2 == 0:
+        half = sig[:n//2]
+    else:
+        half = sig[:n//2+1]
+        
+    symmetric_sig = np.concatenate([half, np.conjugate(np.flip(half)[:-1])])
+    
+    return ifft(symmetric_sig).real
+
 
 def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     '''
     % 1.1) calculate the autocorrelation of several periods of measured MLS signal
-
     output_spectrum = fft(output_signal);
     ouptut_autocorrelation = ifft(output_spectrum .* conj(output_spectrum), 'symmetric');
     % ouptut_autocorrelation corresponds to Fig.5 of the paper. 
     '''
+    
+    print('start')
     
     # output_spectrum = np.array(fft(output_signal), dtype=complex)
     output_spectrum = fft(output_signal)
@@ -81,14 +94,15 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
 
     '''
     % 1.2) % find the period of ouptut_autocorrelation (locate the second peak)
-
     ouptut_autocorrelation(1) = 0; % remove the first (maximum) autocorrelation peak
     [~, L_new] = max(ouptut_autocorrelation(1:end/2)); % find the second peak (maximum)
     % L_new is equal to L + dL (Fig. 5)
     % (dL is delta L)
     '''
     output_autocorrelation[0:L//2] = 0
-    L_new = np.argmax(output_autocorrelation[:output_signal.size//2])
+    L_new = np.argmax(output_autocorrelation[:output_signal.size//2])+1
+    
+    print(len(output_spectrum),len(output_autocorrelation), L_new)
     
     '''
     % find the n-th peak in ouptut_autocorrelation
@@ -100,17 +114,17 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     left = 1*num_periods*(L_new-1)
     right = num_periods*(L_new+1)
     b = np.argmax(output_autocorrelation[left:right])
-    L_new_n = b + num_periods * (L_new - 1) - 1
-    dL_n = L_new_n - num_periods * L_new
+    L_new_n = b + num_periods * (L_new - 1) 
+    dL_n = L_new_n - num_periods * L
+    print(b,L_new, L_new_n, num_periods, dL_n)
 
     '''
     % dL_n corresponds to the dL of n-th period of MLS (n = 6 in this example)
     % it is aproximately equal to dL*n_average
-
     % new sample rate (Eq. (7) of the paper)
     fs2 = fs * L_new_n/(n_periods*L);
     '''
-    fs2 = sampleRate * L_new_n / (num_periods * L_new)
+    fs2 = sampleRate * L_new_n / (num_periods * L)
     
     return fs2, L_new_n, dL_n
 
@@ -194,7 +208,7 @@ def adjust_mls_length(output_signal, num_periods, L, L_new_n, dL_n):
     return OUT_MLS2_n
 
 
-def compute_impulse_resp(OUT_MLS2_n, L, fs2):
+def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
     '''
     % apply the ifft with Hermitian symmetry
     out_mls2_n = ifft(OUT_MLS2_n, 'symmetric');
@@ -202,49 +216,64 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2):
     # N = len(OUT_MLS2_n)
     # right_idx = int(N / 2) + 1
     # out_mls2_n = ifft(OUT_MLS2_n[0:right_idx])
-    out_mls2_n = ifft_sym(OUT_MLS2_n)
+    out_mls2_n = ifft_sym_(OUT_MLS2_n)
+    
+    print('OUT_MLS2_n: ',OUT_MLS2_n[:5])
+    print('out_mls2_n: ',out_mls2_n[:5])
     
     '''
     % take only the 1st period of MLS to plot the results
     out_mls2 = out_mls2_n(1+L:2*L);
     OUT_MLS2 = fft(out_mls2);
     '''
-    out_mls2 = out_mls2_n[1+L:2*L]
+    out_mls2 = out_mls2_n[L:2*L]
     OUT_MLS2 = fft(out_mls2)
+    
+    print('out-mls2: ', out_mls2[:5], len(out_mls2))
+    print('OUT_MLS2: ', OUT_MLS2[:5], len(OUT_MLS2))
 
     '''
     % correct Impulse Response
     ir = ifft(OUT_MLS2 .* conj(MLS), 'symmetric')./L*2;
-
     % new frequency axis
     frequency_axis = linspace(0, fs2, length(ir)+1); frequency_axis(end) = [];
     '''
-    prod = OUT_MLS2 * OUT_MLS2.conj()
+    #prod = OUT_MLS2 * MLS.conj()
+    prod = np.multiply(OUT_MLS2, MLS.conj())
+    print('prod: ', prod[:5])
     # N = len(prod)
     # right_idx = int(N / 2) + 1
     # ir = ifft(prod[0:right_idx]) / (L * 2)
-    ir = fft_sym(prod) / (L * 2)
+    ir = ifft_sym_(prod) / L * 2
     
-    return ir
+    debug = OUT_MLS2_n
+    
+    return ir, debug
 
 '''
 -----------------------------------------------------------------------------------------------------------------------
 Tests
 '''
 
-def run_ir_task(sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=2, debug=False):
-    sig = np.array(sig, dtype=np.float32)
+def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=False):
+    sig = np.array(sig)
     
-    inpFilt = sig[P+1:]
+    MLS = fft(mls)
+    print('MLS: ', MLS[:5])
+    L = len(MLS)
     
-    fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, sampleRate, P)
+    fs2, L_new_n, dL_n = estimate_samples_per_mls_(sig, NUM_PERIODS, sampleRate, L)
+    print(fs2, L_new_n, dL_n)
     #print(f'fs2: {fs2}, L_new_n {L_new_n}, dL_n: {dL_n}')
-    OUT_MLS2_n = adjust_mls_length(inpFilt, NUM_PERIODS, P, L_new_n, dL_n)
+    OUT_MLS2_n = adjust_mls_length(sig, NUM_PERIODS, L, L_new_n, dL_n)
+    test = ifft_sym_(OUT_MLS2_n)
+    print('test: ',test[:5], len(test))
+    print(len(OUT_MLS2_n))
     #print(f'OUT_MLS2_n: {OUT_MLS2_n}')
-    ir = compute_impulse_resp(OUT_MLS2_n, P, fs2)
+    ir,debug_out = compute_impulse_resp(MLS,OUT_MLS2_n, L, fs2)
 
     if debug:
-        return ir
+        return ir,debug_out
     else:
         return str(dumps(ir), encoding="latin1")
     
