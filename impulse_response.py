@@ -61,14 +61,33 @@ def ifft_sym(sig):
 # this is new, seems to work exactly like matlab's fft symmetrical
 def ifft_sym_(sig):
     n = len(sig)
-    if n % 2 == 0:
-        half = sig[:n//2]
+    if n % 2 == 0: ## TODO
+        factor = 0.5
     else:
-        half = sig[:n//2+1]
-        
-    symmetric_sig = np.concatenate([half, np.conjugate(np.flip(half)[:-1])])
+        factor = 0.5
+    print('zeros')
+    print(np.zeros(1))
+    print('np conj')
+    print(len(np.conjugate(np.flip(sig[1:]))))
+    print(np.conjugate(np.flip(sig[1:])))
+
+
+    sig_inv = []
+    #print(len(np.conjugate(np.flip(sig[1:]))))
+    #for i in range(0,len(np.conjugate(np.flip(sig[1:])))):
+        #np.concatenate([np.zeros(1),np.conjugate(np.flip(sig[1:]))[i]])
+    #    sig_inv.append(np.concatenate([np.zeros(1),np.conjugate(np.flip(sig[1:]))[i]]))
     
-    return ifft(symmetric_sig).real
+    
+    #sig_inv = np.hstack(np.zeros((np.conjugate(np.flip(sig[1:])).shape[0], 1)), np.conjugate(np.flip(sig[1:])))
+    sig_inv = np.hstack((np.zeros((np.conjugate(np.flip(sig[1:])).shape[0], 1)),np.conjugate(np.flip(sig[1:]))))
+    print(sig_inv)
+    print(sig)
+    #sig_inv = np.concatenate([np.zeros(1), np.conjugate(np.flip(sig[1:]))])
+    print("out?")
+    sig_sum = sig+sig_inv
+    
+    return factor*ifft(sig_sum).real
 
 
 def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
@@ -83,7 +102,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     
     # output_spectrum = np.array(fft(output_signal), dtype=complex)
     output_spectrum = fft(output_signal)
-    output_autocorrelation = ifft_sym(output_spectrum * np.conjugate(output_spectrum))
+    output_autocorrelation = ifft_sym_(output_spectrum * np.conjugate(output_spectrum))
     
     # # Find the second-order differences
     # inflection = np.diff(np.sign(np.diff(ouptut_autocorrelation)))
@@ -183,9 +202,7 @@ def estimate_samples_per_mls(output_signal, num_periods, sampleRate):
 def adjust_mls_length(output_signal, num_periods, L, L_new_n, dL_n):
     '''
     MLS_ADJUST = fft(output_signal(1:L_new_n));
-
     if dL_n < 0 % zero padding (add zeros to the end of the 1st Nyquist zone)
-
         cut = floor(length(MLS_ADJUST)/2)+1;   % index of end of 1st Nyqyst zone
         OUT_MLS2_n = zeros(n_periods*L,1);     % empty vector
         OUT_MLS2_n(1:cut) = MLS_ADJUST(1:cut); % fill just up to 'cut' (zero padding)
@@ -193,17 +210,26 @@ def adjust_mls_length(output_signal, num_periods, L, L_new_n, dL_n):
     else % remove dL_n points of the spectra
         
         OUT_MLS2_n = MLS_ADJUST(1:n_periods*L);
-
     end
     '''
     MLS_ADJUST = fft(output_signal[:L_new_n])
+    print('mls_adj_len: ', len(MLS_ADJUST))
+    print('mls_adj_len: ', MLS_ADJUST[:5])
+    
+    print('dL_n: ', dL_n)
     
     if dL_n < 0:
         cut = (len(MLS_ADJUST) // 2) + 1
-        OUT_MLS2_n = np.zeros(num_periods * L_new_n)
-        OUT_MLS2_n[0:cut] = MLS_ADJUST[0:cut].real
+        OUT_MLS2_n = np.zeros(num_periods * L,dtype=complex)
+        OUT_MLS2_n[0:cut] = MLS_ADJUST[0:cut]
     else:
         OUT_MLS2_n = MLS_ADJUST[0:num_periods * L]
+        
+        
+    print('OUT_MLS2_n: ', OUT_MLS2_n[:5])
+    print(num_periods*L)
+        
+    
     
     return OUT_MLS2_n
 
@@ -219,7 +245,7 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
     out_mls2_n = ifft_sym_(OUT_MLS2_n)
     
     print('OUT_MLS2_n: ',OUT_MLS2_n[:5])
-    print('out_mls2_n: ',out_mls2_n[:5])
+    print('out_mls2_n len: ', len(out_mls2_n))
     
     '''
     % take only the 1st period of MLS to plot the results
@@ -246,7 +272,7 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
     # ir = ifft(prod[0:right_idx]) / (L * 2)
     ir = ifft_sym_(prod) / L * 2
     
-    debug = OUT_MLS2_n
+    debug = OUT_MLS2_n.copy()
     
     return ir, debug
 
@@ -262,6 +288,8 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
     print('MLS: ', MLS[:5])
     L = len(MLS)
     
+    sig = sig[L:]
+    print(len(sig))
     fs2, L_new_n, dL_n = estimate_samples_per_mls_(sig, NUM_PERIODS, sampleRate, L)
     print(fs2, L_new_n, dL_n)
     #print(f'fs2: {fs2}, L_new_n {L_new_n}, dL_n: {dL_n}')
