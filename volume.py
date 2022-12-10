@@ -128,7 +128,7 @@ def run_volume_task(recordedSignalJson, sampleRate):
 def get_model_parameters(inDB,outDBSPL,lCalibFromPeer):
     global lCalib
     lCalib = lCalibFromPeer
-    guesses=[70,130,100,100,20]
+    guesses=[70,130,70,100,20]
     guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL))
     rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4])
     return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError #backgroundDBSPL,gainDBSPL,T,R,W,rmsError
