@@ -36,14 +36,14 @@ def plot_frequency_spectrum(s, s_name, xlim=[0, 0.01], dt=96000):
 
 
 def readCSVData(pathToFile):
-    df = pd.read_csv(pathToFile)
+    df = pd.read_csv(pathToFile,names=['one','two'])
     df.dropna(inplace=True)
-    return df.to_numpy()[:, 1]
+    return df['two'].to_numpy()[:, 1]
 
 def readCSVData_(pathToFile):
     df = pd.read_csv(pathToFile)
     df.dropna(inplace=True)
-    return df.to_numpy()[:, 0]
+    return df.to_numpy()[:, 1]
 
 def saveBufferToCSV(buffer, pathToFile):
     df = pd.DataFrame(buffer)
@@ -55,7 +55,9 @@ def test_run():
     print("sanity")
     sig = None
     for i in range(num_captured):
-        sig = readCSVData_('/home/billy/Documents/EasyEyes/ivan/data/ir_from_MLS_conv_ones.csv')
+        sig = readCSVData_('/home/billy/Documents/EasyEyes/iphone/neg_32/data/ir_rec_1.csv')
+        print("sig")
+        print(sig)
         print("hwat")
         impulse_responses.append(sig)
         #ir = run_iir_task(impulse_responses, debug=True)
@@ -78,7 +80,7 @@ def test_run():
     print(impulse_responses)
     ir = run_iir_task(impulse_responses, debug=True)
     #plot_frequency_spectrum(ir, 'Impulse Response')
-    saveBufferToCSV(ir, '/home/billy/Documents/EasyEyes/ivan/data/iir_from_ir_from_MLS_conv_ones.csv')
+    saveBufferToCSV(ir, '/home/billy/Documents/EasyEyes/iphone/neg_32/data/iir_from_ir_rec_1.csv')
 
 if __name__ == '__main__':
     test_run()
