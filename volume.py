@@ -40,9 +40,30 @@ def THD(wave, fsHz):
     rms = math.sqrt(p[0])
     return thd, rms
 
+def loudSpeakerCompressorDb(inDb,T,R,W): 
+    WFinal = W if W >= 0 else 0
+    if (inDb > (T+WFinal/2)):
+        outDb = T + (inDb -T) /R
+    elif (inDb > T-WFinal/2):
+        outDb=inDb+(1/R-1)*(inDb-(T-WFinal/2))**2/(2*WFinal)
+    else:
+        outDb=inDb
+
+    return outDb
+
+def microphoneCompressorDb(outDbSpl,T,R,W): #pass correct gain, T, R, W are distinct from loudSpeaker's T, R, and W
+    WFinal = W if W >= 0 else 0
+    if (outDbSpl > (T+WFinal/2)):
+        outDb = T + (outDbSpl -T) /R
+    elif (outDbSpl > T-WFinal/2):
+        outDb=outDbSpl+(1/R-1)*(outDbSpl-(T-WFinal/2))**2/(2*WFinal)
+    else:
+        outDb=outDbSpl
+
+    return outDb
     
 
-def CompressorDb(inDb,T,R,W):
+def CompressorDb(inDb,T,R,W): #microphone compressor, rename CompressorDb => microphoneCompressorDb, accept S but convert S to R
     WFinal = W if W >= 0 else 0
     if (inDb > (T+WFinal/2)):
         outDb = T + (inDb -T) /R
@@ -60,7 +81,7 @@ def CalculateRMSError(inDBValues,outDBSPLValues,backgroundDBSPL,gainDBSPL,T,R,W)
     rmsErrorDBSPL=np.sqrt(np.mean(err))
     return rmsErrorDBSPL
 
-def CompressorInverseDb(outDb,T,R,W):
+def CompressorInverseDb(outDb,T,R,W): #accept S but convert S to R
 
     if (outDb > (T+(W/2)/R)):
         inDb=T+R*(outDb-T)
@@ -76,7 +97,15 @@ def CompressorInverseDb(outDb,T,R,W):
     return inDb
 
 def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W):
-    outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+gainDbSpl)/10))
+    #currently does not include loudspeaker compression, enhance to 1) apply loudspeaker compression. there will be 2 gains: gain at short distance
+    #and gain at long distance. make a note on physical data if collected near or far
+    
+    #0) recording needs to be labeled by near or far 
+    #1) out_power = 10**((CompressorDb(inDb, T_speaker, R_speaker, W_speaker) + gain[i_distance])/10) + 10**(backgroundDbSpl/10)
+    #2) outDbSpl = 10*math.log10(out_power) #done loudspeaker and background sound
+    #3) outDbSpl = CompressorDb(outDbSpl, T_mic, R_mic, W_mic) #define S as S=1/R 
+  
+    outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+gainDbSpl)/10)) #adding gain and background noise
     outDbSpl = CompressorDb(outDbSpl, T, R, W)
     return outDbSpl
 
