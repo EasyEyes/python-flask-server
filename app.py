@@ -26,6 +26,7 @@ def handle_impulse_response_task(request_json, task):
     
     recordedSignalsJson = request_json["payload"]
     sampleRate = request_json["sample-rate"]
+    sampleRate = 48000
     P = request_json["P"]
     result = run_ir_task(recordedSignalsJson, P, sampleRate)
     
