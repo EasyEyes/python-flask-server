@@ -46,17 +46,12 @@ def fft_sym(sig):
     if n % 2 == 0:
         return rfft(sig.real, n=n)
     else:
-        # sig = np.roll(sig, -n//2)
         return fft(sig, n=n)
 
 
 def ifft_sym(sig):
     n = len(sig)
-    if n % 2 == 0:
-        return irfft(sig.real, n=n)
-    else:
-        # sig = np.roll(sig, -n//2)
-        return ifft(sig, n=n)
+    return irfft(sig,n)[:n]
 
 
 def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
@@ -87,8 +82,8 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     % L_new is equal to L + dL (Fig. 5)
     % (dL is delta L)
     '''
-    output_autocorrelation[0:L//2] = 0
-    L_new = np.argmax(output_autocorrelation[:output_signal.size//2])
+    output_autocorrelation[0:1000] = 0
+    L_new = np.argmax(output_autocorrelation[:output_signal.size//2]) + 1
     
     '''
     % find the n-th peak in ouptut_autocorrelation
@@ -100,8 +95,8 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     left = 1*num_periods*(L_new-1)
     right = num_periods*(L_new+1)
     b = np.argmax(output_autocorrelation[left:right])
-    L_new_n = b + num_periods * (L_new - 1) - 1
-    dL_n = L_new_n - num_periods * L_new
+    L_new_n = b + num_periods * (L_new - 1)
+    dL_n = L_new_n - num_periods * L
 
     '''
     % dL_n corresponds to the dL of n-th period of MLS (n = 6 in this example)
@@ -110,7 +105,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     % new sample rate (Eq. (7) of the paper)
     fs2 = fs * L_new_n/(n_periods*L);
     '''
-    fs2 = sampleRate * L_new_n / (num_periods * L_new)
+    fs2 = sampleRate * L_new_n / (num_periods * L)
     
     return fs2, L_new_n, dL_n
 
@@ -186,15 +181,15 @@ def adjust_mls_length(output_signal, num_periods, L, L_new_n, dL_n):
     
     if dL_n < 0:
         cut = (len(MLS_ADJUST) // 2) + 1
-        OUT_MLS2_n = np.zeros(num_periods * L_new_n)
-        OUT_MLS2_n[0:cut] = MLS_ADJUST[0:cut].real
+        OUT_MLS2_n = np.zeros(num_periods * L,dtype=complex)
+        OUT_MLS2_n[0:cut] = MLS_ADJUST[0:cut]
     else:
         OUT_MLS2_n = MLS_ADJUST[0:num_periods * L]
     
     return OUT_MLS2_n
 
 
-def compute_impulse_resp(OUT_MLS2_n, L, fs2):
+def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
     '''
     % apply the ifft with Hermitian symmetry
     out_mls2_n = ifft(OUT_MLS2_n, 'symmetric');
@@ -209,7 +204,7 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2):
     out_mls2 = out_mls2_n(1+L:2*L);
     OUT_MLS2 = fft(out_mls2);
     '''
-    out_mls2 = out_mls2_n[1+L:2*L]
+    out_mls2 = out_mls2_n[L:2*L]
     OUT_MLS2 = fft(out_mls2)
 
     '''
@@ -219,12 +214,11 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2):
     % new frequency axis
     frequency_axis = linspace(0, fs2, length(ir)+1); frequency_axis(end) = [];
     '''
-    prod = OUT_MLS2 * OUT_MLS2.conj()
+    prod = np.multiply(OUT_MLS2, MLS.conj())
     # N = len(prod)
     # right_idx = int(N / 2) + 1
     # ir = ifft(prod[0:right_idx]) / (L * 2)
-    ir = fft_sym(prod) / (L * 2)
-    
+    ir = ifft_sym(prod) / L * 2
     return ir
 
 '''
@@ -232,19 +226,22 @@ def compute_impulse_resp(OUT_MLS2_n, L, fs2):
 Tests
 '''
 
-def run_ir_task(sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=2, debug=False):
-    sig = np.array(sig, dtype=np.float32)
+def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=False):
+    sig = np.array(sig)
+    mls = list(mls.values())
+    mls = np.array(mls)
     
-    inpFilt = sig[P+1:]
+    MLS = fft(mls)
+    L = len(MLS)
     
-    fs2, L_new_n, dL_n = estimate_samples_per_mls_(inpFilt, NUM_PERIODS, sampleRate, P)
-    #print(f'fs2: {fs2}, L_new_n {L_new_n}, dL_n: {dL_n}')
-    OUT_MLS2_n = adjust_mls_length(inpFilt, NUM_PERIODS, P, L_new_n, dL_n)
-    #print(f'OUT_MLS2_n: {OUT_MLS2_n}')
-    ir = compute_impulse_resp(OUT_MLS2_n, P, fs2)
+    fs2, L_new_n, dL_n = estimate_samples_per_mls_(sig, NUM_PERIODS, sampleRate, L)
+
+    OUT_MLS2_n = adjust_mls_length(sig, NUM_PERIODS, L, L_new_n, dL_n)
+
+    ir = compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2)
 
     if debug:
         return ir
     else:
-        return str(dumps(ir), encoding="latin1")
+        return ir.tolist()
     
