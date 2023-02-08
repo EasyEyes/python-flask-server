@@ -1,7 +1,10 @@
 import numpy as np
-from scipy.fft import fft, ifft
+from scipy.fft import fft, ifft, irfft
 from pickle import loads
 
+def ifft_sym(sig):
+    n = len(sig)
+    return irfft(sig,n)[:n]
 
 def compute_filter_g_(h):
     H = fft(h)
@@ -36,16 +39,58 @@ def compute_filter_g(h):
     G[magnitudes == 0] = 0
     g = ifft(G).real
  
-    return g #2.*(g - np.min(g))/np.ptp(g)-1
+    return g
 
+
+def limitInverseResponseBandwidth(inverse_spectrum, fs, limit_ranges):
+    frequencies = np.linspace(0,fs,len(inverse_spectrum)+1)[:-1]
+    # set gain of freqs below and above the limits to 1. Note it's a two sided spectrum
+    for i,freq in enumerate(frequencies):
+        cond1 = (freq < limit_ranges[0]) or (freq > frequencies[-1] - limit_ranges[0])
+        cond2 = (freq > limit_ranges[1]) and (freq < frequencies[-1] - limit_ranges[1])
+        if cond1 or cond2:
+            inverse_spectrum[i] = 1.
+
+    return inverse_spectrum
+
+def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, target=1000):
+    frequencies = np.linspace(0,fs,len(inverse_spectrum)+1)[:-1]
+    freq_target_idx = (np.abs(frequencies - target)).argmin()
+    scale_value = inverse_spectrum[freq_target_idx]
+    inverse_ir = inverse_ir/scale_value
+    return inverse_ir, scale_value
+
+def calculateInverseIR(original_ir, L=5000, fs = 96000):
+
+    # center original IR and prune it to L samples
+    nfft = len(original_ir)
+    H = np.abs(fft(original_ir))
+    ir_new = np.roll(ifft_sym(H),int(nfft/2))
+    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1))/(L+1)))
+    ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)+np.floor(L/2).astype(int)] # centered around -l/2 to L/2
+    ir_pruned = smoothing_win * ir_pruned
+
+    # calculate inverse from pruned IR, limit to relevant bandwidth and scale
+    nfft = L
+    H = np.abs(fft(ir_pruned))
+    iH = np.conj(H)/(np.conj(H)*H)
+    limit_ranges = [100, 16000]
+    iH = limitInverseResponseBandwidth(iH, fs, limit_ranges)
+    inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
+    inverse_ir = smoothing_win * inverse_ir
+    inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
+
+    return inverse_ir, scale_value, ir_pruned
 
 def run_iir_task(impulse_responses_json, debug=False):
-    impulseResponses = [loads(bytes(ir_json, 'latin1')) for ir_json in impulse_responses_json] if not debug else impulse_responses_json
+    impulseResponses= impulse_responses_json
     smallest = np.Infinity
     for ir in impulseResponses:
         if len(ir) < smallest:
             smallest = len(ir)
     impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
     ir = np.mean(impulseResponses, axis=0)
-    g = compute_filter_g(ir)
-    return g.tolist()
+
+    inverse_response, scale, ir_pruned = calculateInverseIR(ir)
+
+    return inverse_response.tolist()
