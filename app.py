@@ -38,10 +38,22 @@ def handle_impulse_response_task(request_json, task):
 def handle_inverse_impulse_response_task(request_json, task):
     if "payload" not in request_json:
         return 400, "Request Body is missing a 'payload' entry"
+    if "mls" not in request_json:
+        return 400, "Request Body is missing a 'mls' entry"
+    if "lowHz" not in request_json:
+        return 400, "Request Body is missing a 'lowHz' entry"
+    if "highHz" not in request_json:
+        return 400, "Request Body is missing a 'highHz' entry"
     impulseResponsesJson = request_json["payload"]
-    result = run_iir_task(impulseResponsesJson)
+    mls = request_json["mls"]
+    lowHz = request_json["lowHz"]
+    highHz = request_json["highHz"]
+    result, convolution = run_iir_task(impulseResponsesJson,mls,lowHz,highHz)
     return 200, {
-        str(task): result
+        str(task): {
+                        "iir":result,
+                        "convolution":convolution
+                    }
     }
 
 def handle_volume_task(request_json, task):

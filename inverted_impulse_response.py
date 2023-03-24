@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.fft import fft, ifft, irfft
 from pickle import loads
+from scipy.signal import lfilter
 
 def ifft_sym(sig):
     n = len(sig)
@@ -60,7 +61,7 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, target=1000):
     inverse_ir = inverse_ir/scale_value
     return inverse_ir, scale_value
 
-def calculateInverseIR(original_ir, L=5000, fs = 96000):
+def calculateInverseIR(original_ir, lowHz, highHz, L=500, fs = 96000):
 
     # center original IR and prune it to L samples
     nfft = len(original_ir)
@@ -74,7 +75,7 @@ def calculateInverseIR(original_ir, L=5000, fs = 96000):
     nfft = L
     H = np.abs(fft(ir_pruned))
     iH = np.conj(H)/(np.conj(H)*H)
-    limit_ranges = [100, 16000]
+    limit_ranges = [lowHz, highHz] #was 100 and 16000
     iH = limitInverseResponseBandwidth(iH, fs, limit_ranges)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
     inverse_ir = smoothing_win * inverse_ir
@@ -82,7 +83,7 @@ def calculateInverseIR(original_ir, L=5000, fs = 96000):
 
     return inverse_ir, scale_value, ir_pruned
 
-def run_iir_task(impulse_responses_json, debug=False):
+def run_iir_task(impulse_responses_json, mls, lowHz, highHz, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     for ir in impulseResponses:
@@ -91,6 +92,20 @@ def run_iir_task(impulse_responses_json, debug=False):
     impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
     ir = np.mean(impulseResponses, axis=0)
 
-    inverse_response, scale, ir_pruned = calculateInverseIR(ir)
+    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz)
+    mls = list(mls.values())
+    mls = np.array(mls)
+    mls_pad = np.pad(mls, (0, 500), 'constant')
+    convolution = lfilter(inverse_response,1,mls_pad)
+    maximum = max(convolution)
+    minimum = abs(min(convolution))
+    divisor = 0
+    if maximum > minimum:
+        divisor = maximum
+    else:
+        divisor = minimum
 
-    return inverse_response.tolist()
+    convolution_div = convolution/divisor
+    convolution_div = convolution_div*.1
+
+    return inverse_response.tolist(), convolution_div.tolist()
