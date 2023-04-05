@@ -3,6 +3,8 @@ import tracemalloc
 
 import psutil
 
+import matplotlib.pyplot as plt
+
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
@@ -102,11 +104,27 @@ def handle_volume_parameters(request_json,task):
             }
     }
 
+def handle_psd_task(request_json,task):
+    rec_unconv = request_json["unconv_rec"]
+    rec_conv = request_json["conv_rec"]
+    [x_unconv, y_unconv] = plt.psd(rec_unconv,Fs=96000,scale_by_freq=False)
+    [x_conv,y_conv] = plt.psd(rec_conv, Fs=96000, scale_by_freq=False)
+
+    return 200, {
+        str(task): {
+            "x_unconv":x_unconv.tolist(),
+            "y_unconv":y_unconv.tolist(),
+            "x_conv":x_conv.tolist(),
+            "y_conv":y_conv.tolist(),
+            }
+    }
+
 SUPPORTED_TASKS = {
     'impulse-response': handle_impulse_response_task,
     'inverse-impulse-response': handle_inverse_impulse_response_task,
     'volume': handle_volume_task_nonlinear,
-    'volume-parameters': handle_volume_parameters
+    'volume-parameters': handle_volume_parameters,
+    'psd': handle_psd_task
 }
 
 @app.route("/task/<string:task>", methods=['POST'])
