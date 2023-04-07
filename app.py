@@ -32,7 +32,9 @@ def handle_impulse_response_task(request_json, task):
     mls = request_json["mls"]
     sampleRate = request_json["sample-rate"]
     P = request_json["P"]
+    print("Starting IR Task")
     result = run_ir_task(mls,recordedSignalsJson, P, sampleRate)
+    print("Finished IR Task")
     return 200, {
         str(task): result
     }

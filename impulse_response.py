@@ -230,7 +230,7 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
     sig = np.array(sig)
     mls = list(mls.values())
     mls = np.array(mls)
-    
+    print("computed mls")
     MLS = fft(mls)
     L = len(MLS)
     
@@ -239,6 +239,7 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
     OUT_MLS2_n = adjust_mls_length(sig, NUM_PERIODS, L, L_new_n, dL_n)
 
     ir = compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2)
+    print("computed ir")
 
     if debug:
         return ir
