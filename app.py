@@ -13,7 +13,7 @@ from volume import run_volume_task,run_volume_task_nonlinear
 from volume import get_model_parameters
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources = {r"/*": {"origins": "*"}})
 
 process = psutil.Process(os.getpid())
 tracemalloc.start()
