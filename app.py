@@ -48,15 +48,26 @@ def handle_inverse_impulse_response_task(request_json, task):
         return 400, "Request Body is missing a 'lowHz' entry"
     if "highHz" not in request_json:
         return 400, "Request Body is missing a 'highHz' entry"
+    if "knownIRGains" not in request_json:
+        return 400, "Request body is missing a 'knownIRGains'"
+    if "knownIRFreqs" not in request_json:
+        return 400, "Request body is missing a 'knownIRFreqs'"
+    if "sampleRate" not in request_json:
+        return 400, "Request body is missing a 'sampleRate'"
+
     impulseResponsesJson = request_json["payload"]
     mls = request_json["mls"]
     lowHz = request_json["lowHz"]
     highHz = request_json["highHz"]
-    result, convolution = run_iir_task(impulseResponsesJson,mls,lowHz,highHz)
+    knownIRGains = request_json["knownIRGains"]
+    knownIRFreqs = request_json["knownIRFreqs"]
+    sampleRate = request_json["sampleRate"]
+    result, convolution, ir = run_iir_task(impulseResponsesJson,mls,lowHz,highHz,knownIRGains,knownIRFreqs,sampleRate)
     return 200, {
         str(task): {
                         "iir":result,
-                        "convolution":convolution
+                        "convolution":convolution,
+                        "ir":ir
                     }
     }
 
