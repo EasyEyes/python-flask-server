@@ -84,7 +84,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, L=500, fs = 96000):
 
     return inverse_ir, scale_value, ir_pruned
 
-def run_iir_task(impulse_responses_json, mls, lowHz, highHz, knownIRGains,knownIRFreqs,sampleRate,debug=False):
+def run_iir_task(impulse_responses_json, mls, lowHz, highHz, componentIRGains,componentIRFreqs,sampleRate,debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     for ir in impulseResponses:
@@ -93,28 +93,38 @@ def run_iir_task(impulse_responses_json, mls, lowHz, highHz, knownIRGains,knownI
     impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
     ir = np.mean(impulseResponses, axis=0) #time domain
 
-    '''
+    
     ir_fft = fft(ir)
     sample_rate = sampleRate
     num_samples = len(ir)
     frequencies = fftfreq(num_samples,1/sample_rate)
-    print('min freq')
-    print(min(frequencies))
-    print('max freq')
-    print(max(frequencies))
+    
     #interpolation part
     #1) convert ir_fft to dB
     ir_fft_db = 20*np.log10(abs(ir_fft))
     #2) interpolate and subtract
-    #interpolate function for knownGains and knownFreqs
-    interp_func = interp1d(knownIRFreqs,knownIRGains)
-    interp_gain2 = interp_func(frequencies)
-    result = ir_fft_db - interp_gain2
+    #interpolate function for componentGains and componentFreqs
+    interp_func = interp1d(componentIRFreqs,componentIRGains)
+
+    #3) some sorting to make sure gains and frequencies are in sorted order when returned
+    min_freq = min(componentIRFreqs)
+    max_freq = max(componentIRFreqs)
+    inbounds_indices = np.where((abs(frequencies) >= min_freq) & (abs(frequencies) <= max_freq))
+    outbounds_indices = np.where((abs(frequencies) <= min_freq) & (abs(frequencies) >= max_freq))
+    inbounds_frequencies = abs(frequencies[inbounds_indices])
+    inbounds_ir_fft_db = ir_fft_db[inbounds_indices]
+    interp_gain2 = interp_func(inbounds_frequencies)
+    result = inbounds_ir_fft_db - interp_gain2
+    final_result = np.zeros_like(frequencies)
+    final_result[inbounds_indices] = result
+    final_result[outbounds_indices] = ir_fft_db[outbounds_indices]
+ 
     #3) convert ir_fft to linear, invert back to time
-    ir = 10**(result/20)
+    ir = 10**(final_result/20)
+    ir_fft = ir
     ir = ifft(ir)
 
-    '''
+    
     #have my IR here, subtract the microphone/louadspeaker ir from this?
     inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz)
     mls = list(mls.values())
@@ -131,5 +141,7 @@ def run_iir_task(impulse_responses_json, mls, lowHz, highHz, knownIRGains,knownI
 
     convolution_div = convolution/divisor
     convolution_div = convolution_div*.1
+    return_ir = ir_fft[:len(ir_fft)//2]
+    return_freq = frequencies[:len(frequencies)//2]
 
-    return inverse_response.tolist(), convolution_div.tolist(), ir.tolist()
+    return inverse_response.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist()
