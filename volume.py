@@ -74,10 +74,10 @@ def CompressorDb(inDb,T,R,W): #microphone compressor, rename CompressorDb => mic
 
     return outDb
 
-def CalculateRMSError(inDBValues,outDBSPLValues,backgroundDBSPL,gainDBSPL,T,R,W):
+def CalculateRMSError(inDBValues,outDBSPLValues,backgroundDBSPL,gainDBSPL,T,R,W,componentGainDBSPL):
     err = []
     for i in range(0,len(inDBValues)):
-        err.append((outDBSPLValues[i] - SoundLevelModel(inDBValues[i],backgroundDBSPL,gainDBSPL,T,R,W))**2)
+        err.append((outDBSPLValues[i] - SoundLevelModel(inDBValues[i],backgroundDBSPL,gainDBSPL,T,R,W,componentGainDBSPL))**2)
     rmsErrorDBSPL=np.sqrt(np.mean(err))
     return rmsErrorDBSPL
 
@@ -96,7 +96,7 @@ def CompressorInverseDb(outDb,T,R,W): #accept S but convert S to R
 
     return inDb
 
-def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W):
+def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W,componentGainDBSPL): #include parameter for component gainDbSpl
     #currently does not include loudspeaker compression, enhance to 1) apply loudspeaker compression. there will be 2 gains: gain at short distance
     #and gain at long distance. make a note on physical data if collected near or far
     
@@ -105,11 +105,12 @@ def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W):
     #2) outDbSpl = 10*math.log10(out_power) #done loudspeaker and background sound
     #3) outDbSpl = CompressorDb(outDbSpl, T_mic, R_mic, W_mic) #define S as S=1/R 
   
-    outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+gainDbSpl)/10)) #adding gain and background noise
+    outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+(gainDbSpl - componentGainDBSPL))/10))
+    #outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+gainDbSpl)/10)) #adding gain and background noise
     outDbSpl = CompressorDb(outDbSpl, T, R, W)
     return outDbSpl
 
-def SoundLevelCost(x,inDB,outDBSPL):
+def SoundLevelCost(x,inDB,outDBSPL,componentGainDBSPL): #include parameter for component gainDbSpl
     backgroundDbSpl=x[0]
     gainDbSpl=x[1]
     T=x[2]
@@ -117,10 +118,13 @@ def SoundLevelCost(x,inDB,outDBSPL):
     W=x[4]
     cost=0
     for i in range(len(inDB)):
-        cost=cost + (outDBSPL[i] - SoundLevelModel(inDB[i],backgroundDbSpl,gainDbSpl,T,R,W))**2
+        cost=cost + (outDBSPL[i] - SoundLevelModel(inDB[i],backgroundDbSpl,gainDbSpl,T,R,W,componentGainDBSPL))**2
+        #cost=cost + (outDBSPL[i] - SoundLevelModel(inDB[i],backgroundDbSpl,gainDbSpl,T,R,W))**2
 
     if W<0:
         cost = cost + 10*len(inDB)*W**2
+    if W>20:
+        cost = cost + 10*len(inDB)*(W-20)**2
 
     return cost
 
@@ -154,13 +158,13 @@ def run_volume_task(recordedSignalJson, sampleRate):
      
     return soundGainDbSPL, P, L, vectorDb
 
-def get_model_parameters(inDB,outDBSPL,lCalibFromPeer):
+def get_model_parameters(inDB,outDBSPL,lCalibFromPeer,componentGainDBSPL):
     global lCalib
     lCalib = lCalibFromPeer
     maxMeasuredDBSPL = np.max(outDBSPL)
     guesses=[70,100,maxMeasuredDBSPL,100,20]
-    guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL))
-    rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4])
+    guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL,componentGainDBSPL))
+    rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4],componentGainDBSPL)
     return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError #backgroundDBSPL,gainDBSPL,T,R,W,rmsError
 
 def run_volume_task_nonlinear(recordedSignalJson, sampleRate,lCalibFromPeer):
