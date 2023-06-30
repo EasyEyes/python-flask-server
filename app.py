@@ -48,10 +48,10 @@ def handle_inverse_impulse_response_task(request_json, task):
         return 400, "Request Body is missing a 'lowHz' entry"
     if "highHz" not in request_json:
         return 400, "Request Body is missing a 'highHz' entry"
-    if "knownIRGains" not in request_json:
-        return 400, "Request body is missing a 'knownIRGains'"
-    if "knownIRFreqs" not in request_json:
-        return 400, "Request body is missing a 'knownIRFreqs'"
+    if "componentIRGains" not in request_json:
+        return 400, "Request body is missing a 'componentIRGains'"
+    if "componentIRFreqs" not in request_json:
+        return 400, "Request body is missing a 'componentIRFreqs'"
     if "sampleRate" not in request_json:
         return 400, "Request body is missing a 'sampleRate'"
 
@@ -59,15 +59,16 @@ def handle_inverse_impulse_response_task(request_json, task):
     mls = request_json["mls"]
     lowHz = request_json["lowHz"]
     highHz = request_json["highHz"]
-    knownIRGains = request_json["knownIRGains"]
-    knownIRFreqs = request_json["knownIRFreqs"]
+    componentIRGains = request_json["componentIRGains"]
+    componentIRFreqs = request_json["componentIRFreqs"]
     sampleRate = request_json["sampleRate"]
-    result, convolution, ir = run_iir_task(impulseResponsesJson,mls,lowHz,highHz,knownIRGains,knownIRFreqs,sampleRate)
+    result, convolution, ir,frequencies = run_iir_task(impulseResponsesJson,mls,lowHz,highHz,componentIRGains,componentIRFreqs,sampleRate)
     return 200, {
         str(task): {
                         "iir":result,
                         "convolution":convolution,
-                        "ir":ir
+                        "ir":ir,
+                        "frequencies":frequencies
                     }
     }
 
@@ -105,7 +106,8 @@ def handle_volume_parameters(request_json,task):
     inDB = request_json["inDBValues"]
     outDBSPL = request_json["outDBSPLValues"]
     lCalib = request_json["lCalib"]
-    backgroundDBSPL, gainDBSPL, T, R, W, rmsError = get_model_parameters(inDB,outDBSPL,lCalib)
+    componentGainDBSPL = request_json["componentGainDBSPL"]
+    backgroundDBSPL, gainDBSPL, T, R, W, rmsError = get_model_parameters(inDB,outDBSPL,lCalib,componentGainDBSPL)
     return 200, {
         str(task): {
             "backgroundDBSPL":backgroundDBSPL,
