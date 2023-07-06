@@ -84,7 +84,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, L=500, fs = 96000):
 
     return inverse_ir, scale_value, ir_pruned
 
-def run_iir_task(impulse_responses_json, mls, lowHz, highHz, componentIRGains,componentIRFreqs,sampleRate,debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, componentIRGains,componentIRFreqs,sampleRate,debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     for ir in impulseResponses:
@@ -145,3 +145,29 @@ def run_iir_task(impulse_responses_json, mls, lowHz, highHz, componentIRGains,co
     return_freq = frequencies[:len(frequencies)//2]
 
     return inverse_response.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist()
+
+def run_system_iir_task(impulse_responses_json, mls, lowHz, highHz,sampleRate,debug=False):
+    impulseResponses= impulse_responses_json
+    smallest = np.Infinity
+    for ir in impulseResponses:
+        if len(ir) < smallest:
+            smallest = len(ir)
+    impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
+    ir = np.mean(impulseResponses, axis=0) #time domain
+    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz)
+    mls = list(mls.values())
+    mls = np.array(mls)
+    mls_pad = np.pad(mls, (0, 500), 'constant')
+    convolution = lfilter(inverse_response,1,mls_pad)
+    maximum = max(convolution)
+    minimum = abs(min(convolution))
+    divisor = 0
+    if maximum > minimum:
+        divisor = maximum
+    else:
+        divisor = minimum
+
+    convolution_div = convolution/divisor
+    convolution_div = convolution_div*.1
+
+    return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist()
