@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
-from inverted_impulse_response import run_iir_task
+from inverted_impulse_response import run_component_iir_task, run_system_iir_task
 from volume import run_volume_task,run_volume_task_nonlinear
 from volume import get_model_parameters
 
@@ -39,7 +39,7 @@ def handle_impulse_response_task(request_json, task):
         str(task): result
     }
 
-def handle_inverse_impulse_response_task(request_json, task):
+def handle_component_inverse_impulse_response_task(request_json, task):
     if "payload" not in request_json:
         return 400, "Request Body is missing a 'payload' entry"
     if "mls" not in request_json:
@@ -62,13 +62,39 @@ def handle_inverse_impulse_response_task(request_json, task):
     componentIRGains = request_json["componentIRGains"]
     componentIRFreqs = request_json["componentIRFreqs"]
     sampleRate = request_json["sampleRate"]
-    result, convolution, ir,frequencies = run_iir_task(impulseResponsesJson,mls,lowHz,highHz,componentIRGains,componentIRFreqs,sampleRate)
+    result, convolution, ir,frequencies = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,componentIRGains,componentIRFreqs,sampleRate)
     return 200, {
         str(task): {
                         "iir":result,
                         "convolution":convolution,
                         "ir":ir,
                         "frequencies":frequencies
+                    }
+    }
+
+def handle_system_inverse_impulse_response_task(request_json, task):
+    if "payload" not in request_json:
+        return 400, "Request Body is missing a 'payload' entry"
+    if "mls" not in request_json:
+        return 400, "Request Body is missing a 'mls' entry"
+    if "lowHz" not in request_json:
+        return 400, "Request Body is missing a 'lowHz' entry"
+    if "highHz" not in request_json:
+        return 400, "Request Body is missing a 'highHz' entry"
+    if "sampleRate" not in request_json:
+        return 400, "Request body is missing a 'sampleRate'"
+
+    impulseResponsesJson = request_json["payload"]
+    mls = request_json["mls"]
+    lowHz = request_json["lowHz"]
+    highHz = request_json["highHz"]
+    sampleRate = request_json["sampleRate"]
+    result, convolution, ir = run_system_iir_task(impulseResponsesJson,mls,lowHz,highHz,sampleRate)
+    return 200, {
+        str(task): {
+                        "iir":result,
+                        "convolution":convolution,
+                        "ir":ir
                     }
     }
 
@@ -136,7 +162,8 @@ def handle_psd_task(request_json,task):
 
 SUPPORTED_TASKS = {
     'impulse-response': handle_impulse_response_task,
-    'inverse-impulse-response': handle_inverse_impulse_response_task,
+    'component-inverse-impulse-response': handle_component_inverse_impulse_response_task,
+    'system-inverse-impulse-response': handle_system_inverse_impulse_response_task,
     'volume': handle_volume_task_nonlinear,
     'volume-parameters': handle_volume_parameters,
     'psd': handle_psd_task
