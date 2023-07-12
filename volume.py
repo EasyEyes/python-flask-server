@@ -169,7 +169,7 @@ def get_model_parameters(inDB,outDBSPL,lCalibFromPeer,componentGainDBSPL):
 
 def run_volume_task_nonlinear(recordedSignalJson, sampleRate,lCalibFromPeer):
     global lCalib
-    lCalib = lCalibFromPeer
+    lCalib = 0
     sig = np.array(recordedSignalJson, dtype=np.float32)
     sinewave = generateSineWave(sampleRate) # Generate sine wave for comparison
     soundGainDbSPL, P, L, vectorDb = getCalibration(sig, sinewave)
