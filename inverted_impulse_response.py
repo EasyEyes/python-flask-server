@@ -81,7 +81,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, L=500, fs = 96000):
     inverse_ir = smoothing_win * inverse_ir
     inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
 
-    return inverse_ir, scale_value, ir_pruned
+    return inverse_ir, scale_value, ir_pruned, H
 
 def run_iir_task(impulse_responses_json, mls, lowHz, highHz, debug=False):
     impulseResponses= impulse_responses_json
@@ -92,7 +92,7 @@ def run_iir_task(impulse_responses_json, mls, lowHz, highHz, debug=False):
     impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
     ir = np.mean(impulseResponses, axis=0)
 
-    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz)
+    inverse_response, scale, ir_pruned, H = calculateInverseIR(ir,lowHz,highHz)
     mls = list(mls.values())
     mls = np.array(mls)
     mls_pad = np.pad(mls, (0, 500), 'constant')
