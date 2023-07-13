@@ -122,7 +122,9 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, component
     #3) convert ir_fft to linear, invert back to time
     ir = 10**(final_result/20)
     ir_fft = ir
-    ir = ifft(ir)
+    #ir = ifft(ir)
+    nfft = len(ir)
+    ir = np.roll(ifft_sym(ir),int(nfft/2))
 
     
     #have my IR here, subtract the microphone/louadspeaker ir from this?
