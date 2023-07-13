@@ -126,7 +126,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, component
 
     
     #have my IR here, subtract the microphone/louadspeaker ir from this?
-    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz)
+    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,500, sample_rate)
     mls = list(mls.values())
     mls = np.array(mls)
     mls_pad = np.pad(mls, (0, 500), 'constant')
@@ -154,7 +154,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, highHz,sampleRate,de
             smallest = len(ir)
     impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
     ir = np.mean(impulseResponses, axis=0) #time domain
-    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz)
+    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,500,sampleRate)
     mls = list(mls.values())
     mls = np.array(mls)
     mls_pad = np.pad(mls, (0, 500), 'constant')
