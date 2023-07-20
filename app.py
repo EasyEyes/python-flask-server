@@ -30,13 +30,16 @@ def handle_impulse_response_task(request_json, task):
         return 400, "Request Body us missing a 'P' entry"
     if "mls" not in request_json:
         return 400, "Request Body is missing a 'mls' entry"
+    if "numPeriods" not in request_json:
+        return 400, "Request Body is missing a 'numPeriods' entry"
     
     recordedSignalsJson = request_json["payload"]
     mls = request_json["mls"]
     sampleRate = request_json["sample-rate"]
     P = request_json["P"]
+    NUM_PERIODS = request_json["numPeriods"]
     print("Starting IR Task")
-    result = run_ir_task(mls,recordedSignalsJson, P, sampleRate)
+    result = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
     print("Finished IR Task")
     return 200, {
         str(task): result
