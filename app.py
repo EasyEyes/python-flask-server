@@ -30,13 +30,17 @@ def handle_impulse_response_task(request_json, task):
         return 400, "Request Body us missing a 'P' entry"
     if "mls" not in request_json:
         return 400, "Request Body is missing a 'mls' entry"
+    if "numPeriods" not in request_json:
+        return 400, "Request Body is missing a 'numPeriods' entry"
     
     recordedSignalsJson = request_json["payload"]
     mls = request_json["mls"]
     sampleRate = request_json["sample-rate"]
     P = request_json["P"]
+    NUM_PERIODS = request_json["numPeriods"]
+    NUM_PERIODS = int(NUM_PERIODS)
     print("Starting IR Task")
-    result = run_ir_task(mls,recordedSignalsJson, P, sampleRate)
+    result = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
     print("Finished IR Task")
     return 200, {
         str(task): result
@@ -154,8 +158,8 @@ def handle_psd_task(request_json,task):
     sampleRate = request_json["sampleRate"]
     print('length of rec')
     print(len(rec_unconv))
-    [x_unconv, y_unconv] = plt.psd(rec_unconv,Fs=sampleRate,scale_by_freq=False)
-    [x_conv,y_conv] = plt.psd(rec_conv, Fs=sampleRate, scale_by_freq=False)
+    [x_unconv, y_unconv] = plt.psd(rec_unconv,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
+    [x_conv,y_conv] = plt.psd(rec_conv, Fs=sampleRate, NFFT=2048,scale_by_freq=False)
 
     return 200, {
         str(task): {
@@ -200,7 +204,7 @@ def handle_subtracted_psd_task(request_json,task):
     #3) convert rec_fft to linear, invert back to time
     rec = 10**(final_result/20)
     rec = ifft(rec)
-    [x, y] = plt.psd(rec.real,Fs=sample_rate,scale_by_freq=False)
+    [x, y] = plt.psd(rec.real,Fs=sample_rate,NFFT=2048,scale_by_freq=False)
     #[x_conv,y_conv] = plt.psd(rec_conv, Fs=96000, scale_by_freq=False)
 
     return 200, {

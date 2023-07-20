@@ -162,7 +162,14 @@ def get_model_parameters(inDB,outDBSPL,lCalibFromPeer,componentGainDBSPL):
     global lCalib
     lCalib = lCalibFromPeer
     maxMeasuredDBSPL = np.max(outDBSPL)
-    guesses=[70,100,maxMeasuredDBSPL,100,20]
+    summed_gain = 0
+    gain_count = 0
+    for i in range(0,len(inDB)):
+        if inDB[i] <= -20:
+            summed_gain = summed_gain + (outDBSPL[i] - inDB[i])
+            gain_count = gain_count + 1
+    guess_gain = summed_gain/gain_count
+    guesses=[70,guess_gain,0,100,20]
     guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL,componentGainDBSPL))
     rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4],componentGainDBSPL)
     return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError #backgroundDBSPL,gainDBSPL,T,R,W,rmsError
