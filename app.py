@@ -38,6 +38,7 @@ def handle_impulse_response_task(request_json, task):
     sampleRate = request_json["sample-rate"]
     P = request_json["P"]
     NUM_PERIODS = request_json["numPeriods"]
+    NUM_PERIODS = int(NUM_PERIODS)
     print("Starting IR Task")
     result = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
     print("Finished IR Task")
