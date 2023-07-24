@@ -169,7 +169,7 @@ def get_model_parameters(inDB,outDBSPL,lCalibFromPeer,componentGainDBSPL):
             summed_gain = summed_gain + (outDBSPL[i] - inDB[i])
             gain_count = gain_count + 1
     guess_gain = summed_gain/gain_count
-    guesses=[70,guess_gain,0,100,20]
+    guesses=[70,guess_gain,100,100,20]
     guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL,componentGainDBSPL))
     rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4],componentGainDBSPL)
     return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError #backgroundDBSPL,gainDBSPL,T,R,W,rmsError
