@@ -14,6 +14,8 @@ from volume import get_model_parameters
 import numpy as np
 from scipy.fft import fft, ifft, irfft, fftfreq
 from scipy.interpolate import interp1d
+from scipy.signal import max_len_seq
+import math
 
 app = Flask(__name__)
 CORS(app, resources = {r"/*": {"origins": "*"}})
@@ -170,6 +172,21 @@ def handle_psd_task(request_json,task):
             }
     }
 
+def handle_mls_task(request_json,task):
+
+    #length of mls will be 2**nbits - 1
+    desired_length = request_json["length"]
+    nbits = math.ceil(math.log(desired_length + 1, 2))
+    ret_arr = max_len_seq(nbits,length=desired_length)
+    mls = ret_arr[0]
+    mls_transformed = np.where(mls == 0, -1, 1)
+    
+    return 200, {
+        str(task):{
+            "mls":mls_transformed.tolist()
+        }
+    }
+
 def handle_subtracted_psd_task(request_json,task):
     #print(request_json);
     rec = request_json["rec"]
@@ -221,7 +238,8 @@ SUPPORTED_TASKS = {
     'volume': handle_volume_task_nonlinear,
     'volume-parameters': handle_volume_parameters,
     'psd': handle_psd_task,
-    'subtracted-psd':handle_subtracted_psd_task
+    'subtracted-psd':handle_subtracted_psd_task,
+    'mls':handle_mls_task
 }
 
 @app.route("/task/<string:task>", methods=['POST'])
