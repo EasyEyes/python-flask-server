@@ -233,6 +233,7 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
     print("computed mls")
     MLS = fft(mls)
     L = len(MLS)
+    NUM_PERIODS = NUM_PERIODS - 1
     
     fs2, L_new_n, dL_n = estimate_samples_per_mls_(sig, NUM_PERIODS, sampleRate, L)
 
