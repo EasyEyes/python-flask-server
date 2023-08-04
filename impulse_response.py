@@ -62,7 +62,9 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     ouptut_autocorrelation = ifft(output_spectrum .* conj(output_spectrum), 'symmetric');
     % ouptut_autocorrelation corresponds to Fig.5 of the paper. 
     '''
-    
+    if num_periods < 2:
+        print("Error, asynchronous algorithm requires atleast 2 periods")
+
     # output_spectrum = np.array(fft(output_signal), dtype=complex)
     output_spectrum = fft(output_signal)
     output_autocorrelation = ifft_sym(output_spectrum * np.conjugate(output_spectrum))
@@ -92,12 +94,15 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     L_new_n = b + n_periods*(L_new-1) - 1; % L_new_n is L_new of n_periods
     dL_n = L_new_n - n_periods*L;
     '''
-    left = 1*num_periods*(L_new-1)
+    num_periods = num_periods-1 
+    left = num_periods*(L_new-1)
     right = num_periods*(L_new+1)
+    print("Searching for n-th peak in range " + str(left) + " to " + str(right) + " in array of length " + str(len(output_autocorrelation)))
     b = np.argmax(output_autocorrelation[left:right])
     L_new_n = b + num_periods * (L_new - 1)
     dL_n = L_new_n - num_periods * L
-
+    print("Using last peak, recorded " + str(num_periods) + "*MLS period " + str(L_new_n) + " exceeds played " + str(num_periods) + "*MLS period " + str(num_periods*L) + " by fraction " + str(L_new_n/(num_periods*L)-1))
+    
     '''
     % dL_n corresponds to the dL of n-th period of MLS (n = 6 in this example)
     % it is aproximately equal to dL*n_average
@@ -233,7 +238,6 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
     print("computed mls")
     MLS = fft(mls)
     L = len(MLS)
-    NUM_PERIODS = NUM_PERIODS - 1
     
     fs2, L_new_n, dL_n = estimate_samples_per_mls_(sig, NUM_PERIODS, sampleRate, L)
 
