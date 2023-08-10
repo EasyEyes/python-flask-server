@@ -142,7 +142,6 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, component
         divisor = minimum
 
     convolution_div = convolution/divisor
-    convolution_div = convolution_div*.1
     return_ir = ir_fft[:len(ir_fft)//2]
     return_freq = frequencies[:len(frequencies)//2]
 
@@ -170,6 +169,5 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, highHz,sampleRate,de
         divisor = minimum
 
     convolution_div = convolution/divisor
-    convolution_div = convolution_div*.1
 
     return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist()
