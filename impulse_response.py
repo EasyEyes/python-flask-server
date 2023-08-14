@@ -84,9 +84,11 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     % L_new is equal to L + dL (Fig. 5)
     % (dL is delta L)
     '''
+    corrZero = output_autocorrelation[0]
     output_autocorrelation[0:1000] = 0
     L_new = np.argmax(output_autocorrelation[:output_signal.size//2]) + 1
-    
+    print("L=" + str(L) + ", L_new=" + str(L_new) + ", based on second peak")
+    print("Autocorr at 2nd peak="+str(output_autocorrelation[L_new-1]/corrZero)+", predicted="+str(1-1/(num_periods-1)))
     '''
     % find the n-th peak in ouptut_autocorrelation
     % Proceeding a n-th peak increases the precision of estimation
@@ -102,6 +104,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     L_new_n = b + num_periods * (L_new - 1)
     dL_n = L_new_n - num_periods * L
     print("Using last peak, recorded " + str(num_periods) + "*MLS period " + str(L_new_n) + " exceeds played " + str(num_periods) + "*MLS period " + str(num_periods*L) + " by fraction " + str(L_new_n/(num_periods*L)-1))
+    print("Autocorr at n-th peak="+str(output_autocorrelation[b]/corrZero)+", predicted="+str(1/num_periods))
     
     '''
     % dL_n corresponds to the dL of n-th period of MLS (n = 6 in this example)
