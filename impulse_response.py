@@ -205,15 +205,22 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
     # N = len(OUT_MLS2_n)
     # right_idx = int(N / 2) + 1
     # out_mls2_n = ifft(OUT_MLS2_n[0:right_idx])
+    print("Inside compute_impulse_resp")
+    print("Length of MLS= " + str(len(MLS)))
+    print("Length of OUT_MLS2_n= " + str(len(OUT_MLS2_n)))
+    print("L= "+str(L))
+    print("fs2= " + str(fs2))
     out_mls2_n = ifft_sym(OUT_MLS2_n)
-    
+    print("Length of out_mls2_n= " + str(len(out_mls2_n)))
     '''
     % take only the 1st period of MLS to plot the results
     out_mls2 = out_mls2_n(1+L:2*L);
     OUT_MLS2 = fft(out_mls2);
     '''
     out_mls2 = out_mls2_n[L:2*L]
+    print("Length of out_mls2= " + str(len(out_mls2)))
     OUT_MLS2 = fft(out_mls2)
+    print("Length of OUT_MLS2= " + str(len(OUT_MLS2)))
 
     '''
     % correct Impulse Response
