@@ -217,7 +217,8 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
     out_mls2 = out_mls2_n(1+L:2*L);
     OUT_MLS2 = fft(out_mls2);
     '''
-    out_mls2 = out_mls2_n[L:2*L]
+    #out_mls2 = out_mls2_n[L:2*L]
+    out_mls2 = out_mls2_n[0:L-1]
     print("Length of out_mls2= " + str(len(out_mls2)))
     OUT_MLS2 = fft(out_mls2)
     print("Length of OUT_MLS2= " + str(len(OUT_MLS2)))
