@@ -96,7 +96,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, component
         ir = np.mean(impulseResponses, axis=0) #time domain
     else:
         ir = np.array(impulseResponses)
-        ir = ir.reshape((44100,))
+        ir = ir.reshape((ir.shape[1],))
     ir_fft = fft(ir)
     sample_rate = sampleRate
     num_samples = len(ir)
@@ -162,7 +162,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, highHz,sampleRate,de
         ir = np.mean(impulseResponses, axis=0)
     else:
         ir = np.array(impulseResponses)
-        ir = ir.reshape((44100,))
+        ir = ir.reshape((ir.shape[1],))
     inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,500,sampleRate)
     mls = list(mls.values())
     mls = np.array(mls)
