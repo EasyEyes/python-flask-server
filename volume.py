@@ -110,10 +110,19 @@ def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W,componentGainDBSPL): #i
     outDbSpl = CompressorDb(outDbSpl, T, R, W)
     return outDbSpl
 
+def second_largest(arr):
+    unique_values = set(arr)
+    sorted_values = sorted(unique_values, reverse=True)
+
+    if (len(sorted_values) < 2):
+        return None
+    return sorted_values[1]
+
 def SoundLevelCost(x,inDB,outDBSPL,componentGainDBSPL): #include parameter for component gainDbSpl
     backgroundDbSpl=x[0]
     gainDbSpl=x[1]
-    T=x[2]
+    T=second_largest(outDBSPL)
+
     R=x[3]
     W=x[4]
     cost=0
