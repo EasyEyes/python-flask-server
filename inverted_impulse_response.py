@@ -87,13 +87,16 @@ def calculateInverseIR(original_ir, lowHz, highHz, L=500, fs = 96000):
 def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, componentIRGains,componentIRFreqs,sampleRate,debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
-    for ir in impulseResponses:
-        if len(ir) < smallest:
-            smallest = len(ir)
-    impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
-    ir = np.mean(impulseResponses, axis=0) #time domain
-
-    
+    ir = []
+    if (len(impulseResponses) > 1):
+        for ir in impulseResponses:
+            if len(ir) < smallest:
+                smallest = len(ir)
+        impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
+        ir = np.mean(impulseResponses, axis=0) #time domain
+    else:
+        ir = np.array(impulseResponses)
+        ir = ir.reshape((44100,))
     ir_fft = fft(ir)
     sample_rate = sampleRate
     num_samples = len(ir)
@@ -150,11 +153,16 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, component
 def run_system_iir_task(impulse_responses_json, mls, lowHz, highHz,sampleRate,debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
-    for ir in impulseResponses:
-        if len(ir) < smallest:
-            smallest = len(ir)
-    impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
-    ir = np.mean(impulseResponses, axis=0) #time domain
+    ir = []
+    if (len(impulseResponses) > 1):
+        for ir in impulseResponses:
+            if len(ir) < smallest:
+                smallest = len(ir)
+        impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
+        ir = np.mean(impulseResponses, axis=0)
+    else:
+        ir = np.array(impulseResponses)
+        ir = ir.reshape((44100,))
     inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,500,sampleRate)
     mls = list(mls.values())
     mls = np.array(mls)
