@@ -42,10 +42,13 @@ def handle_impulse_response_task(request_json, task):
     NUM_PERIODS = request_json["numPeriods"]
     NUM_PERIODS = int(NUM_PERIODS)
     print("Starting IR Task")
-    result = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
+    ir, autocorrelation = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
     print("Finished IR Task")
     return 200, {
-        str(task): result
+        str(task): {
+            'ir':ir,
+            'autocorrelation': autocorrelation
+        }
     }
 
 def handle_component_inverse_impulse_response_task(request_json, task):

@@ -68,6 +68,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     # output_spectrum = np.array(fft(output_signal), dtype=complex)
     output_spectrum = fft(output_signal)
     output_autocorrelation = ifft_sym(output_spectrum * np.conjugate(output_spectrum))
+    return_output_autocorrelation = output_autocorrelation
     
     # # Find the second-order differences
     # inflection = np.diff(np.sign(np.diff(ouptut_autocorrelation)))
@@ -115,7 +116,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     '''
     fs2 = sampleRate * L_new_n / (num_periods * L)
     
-    return fs2, L_new_n, dL_n
+    return fs2, L_new_n, dL_n, return_output_autocorrelation
 
 
 def estimate_samples_per_mls(output_signal, num_periods, sampleRate):
@@ -250,15 +251,14 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
     MLS = fft(mls)
     L = len(MLS)
     
-    fs2, L_new_n, dL_n = estimate_samples_per_mls_(sig, NUM_PERIODS, sampleRate, L)
+    fs2, L_new_n, dL_n, autocorrelation = estimate_samples_per_mls_(sig, NUM_PERIODS, sampleRate, L)
 
     OUT_MLS2_n = adjust_mls_length(sig, NUM_PERIODS, L, L_new_n, dL_n)
 
     ir = compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2)
     print("computed ir")
-
     if debug:
-        return ir
+        return ir, autocorrelation
     else:
-        return ir.tolist()
+        return ir.tolist(), autocorrelation.tolist()
     
