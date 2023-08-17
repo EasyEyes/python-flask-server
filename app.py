@@ -66,15 +66,18 @@ def handle_component_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'componentIRFreqs'"
     if "sampleRate" not in request_json:
         return 400, "Request body is missing a 'sampleRate'"
+    if "iirLength" not in request_json:
+        return 400, "Request body is missing a 'iirLength'"
 
     impulseResponsesJson = request_json["payload"]
+    iir_length = request_json["iirLength"]
     mls = request_json["mls"]
     lowHz = request_json["lowHz"]
     highHz = request_json["highHz"]
     componentIRGains = request_json["componentIRGains"]
     componentIRFreqs = request_json["componentIRFreqs"]
     sampleRate = request_json["sampleRate"]
-    result, convolution, ir,frequencies = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,componentIRGains,componentIRFreqs,sampleRate)
+    result, convolution, ir,frequencies = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,sampleRate)
     return 200, {
         str(task): {
                         "iir":result,
@@ -95,13 +98,16 @@ def handle_system_inverse_impulse_response_task(request_json, task):
         return 400, "Request Body is missing a 'highHz' entry"
     if "sampleRate" not in request_json:
         return 400, "Request body is missing a 'sampleRate'"
+    if "iirLength" not in request_json:
+        return 400, "Request body is missing a 'iirLength'"
 
     impulseResponsesJson = request_json["payload"]
+    iir_length = request_json["iirLength"]
     mls = request_json["mls"]
     lowHz = request_json["lowHz"]
     highHz = request_json["highHz"]
     sampleRate = request_json["sampleRate"]
-    result, convolution, ir = run_system_iir_task(impulseResponsesJson,mls,lowHz,highHz,sampleRate)
+    result, convolution, ir = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,sampleRate)
     return 200, {
         str(task): {
                         "iir":result,
