@@ -62,8 +62,9 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, target=1000):
     inverse_ir = inverse_ir/scale_value
     return inverse_ir, scale_value
 
-def calculateInverseIR(original_ir, lowHz, highHz, L=500, fs = 96000):
+def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
 
+    L = iir_length
     # center original IR and prune it to L samples
     nfft = len(original_ir)
     H = np.abs(fft(original_ir))
@@ -84,7 +85,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, L=500, fs = 96000):
 
     return inverse_ir, scale_value, ir_pruned
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, componentIRGains,componentIRFreqs,sampleRate,debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate,debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -131,7 +132,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, component
 
     
     #have my IR here, subtract the microphone/louadspeaker ir from this?
-    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,500, sample_rate)
+    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate)
     mls = list(mls.values())
     mls = np.array(mls)
     mls_pad = np.pad(mls, (0, 500), 'constant')
@@ -150,7 +151,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, component
 
     return inverse_response.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist()
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, highHz,sampleRate,debug=False):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,sampleRate,debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -163,7 +164,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, highHz,sampleRate,de
     else:
         ir = np.array(impulseResponses)
         ir = ir.reshape((ir.shape[1],))
-    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,500,sampleRate)
+    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz, iir_length ,sampleRate)
     mls = list(mls.values())
     mls = np.array(mls)
     mls_pad = np.pad(mls, (0, 500), 'constant')
