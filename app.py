@@ -151,7 +151,7 @@ def handle_volume_parameters(request_json,task):
     outDBSPL = request_json["outDBSPLValues"]
     lCalib = request_json["lCalib"]
     componentGainDBSPL = request_json["componentGainDBSPL"]
-    backgroundDBSPL, gainDBSPL, T, R, W, rmsError = get_model_parameters(inDB,outDBSPL,lCalib,componentGainDBSPL)
+    backgroundDBSPL, gainDBSPL, T, R, W, rmsError, modelGuesses = get_model_parameters(inDB,outDBSPL,lCalib,componentGainDBSPL)
     return 200, {
         str(task): {
             "backgroundDBSPL":backgroundDBSPL,
@@ -160,6 +160,7 @@ def handle_volume_parameters(request_json,task):
             "R":R,
             "W":W,
             "RMSError":rmsError,
+            "initialGuesses":modelGuesses
             }
     }
 

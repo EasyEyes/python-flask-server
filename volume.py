@@ -179,9 +179,10 @@ def get_model_parameters(inDB,outDBSPL,lCalibFromPeer,componentGainDBSPL):
     guess_gain = summed_gain/gain_count
     T=second_largest(outDBSPL)
     guesses=[70,guess_gain,T,100,20]
+    modelGuesses = guesses
     guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL,componentGainDBSPL))
     rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4],componentGainDBSPL)
-    return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError #backgroundDBSPL,gainDBSPL,T,R,W,rmsError
+    return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError, modelGuesses #backgroundDBSPL,gainDBSPL,T,R,W,rmsError, initialGuesses
 
 def run_volume_task_nonlinear(recordedSignalJson, sampleRate,lCalibFromPeer):
     global lCalib
