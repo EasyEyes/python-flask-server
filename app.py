@@ -160,7 +160,13 @@ def handle_volume_parameters(request_json,task):
             "R":R,
             "W":W,
             "RMSError":rmsError,
-            "initialGuesses":modelGuesses
+            "initialGuesses":{
+                "backgroundDBSPL": modelGuesses[0],
+                "gainDBSPL": modelGuesses[1],
+                "T": modelGuesses[2],
+                "R": modelGuess[3],
+                "W": modelGuesses[4],
+            }
             }
     }
 
