@@ -118,6 +118,14 @@ def second_largest(arr):
         return None
     return sorted_values[1]
 
+def lowest_value(arr):
+    unique_values = set(arr)
+    sorted_values = sorted(unique_values, reverse=False)
+
+    if (len(sorted_values) < 1):
+        return None
+    return sorted_values[0]
+
 def SoundLevelCost(x,inDB,outDBSPL,componentGainDBSPL): #include parameter for component gainDbSpl
     backgroundDbSpl=x[0]
     gainDbSpl=x[1]
@@ -178,7 +186,7 @@ def get_model_parameters(inDB,outDBSPL,lCalibFromPeer,componentGainDBSPL):
             gain_count = gain_count + 1
     guess_gain = summed_gain/gain_count
     T=second_largest(outDBSPL)
-    guesses=[70,guess_gain,T,100,20]
+    guesses=[lowest_value(outDBSPL),guess_gain,T,100,20]
     modelGuesses = guesses
     guesses=scipy.optimize.fmin(SoundLevelCost,guesses,args=(inDB,outDBSPL,componentGainDBSPL))
     rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4],componentGainDBSPL)
