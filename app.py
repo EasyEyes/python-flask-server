@@ -164,7 +164,7 @@ def handle_volume_parameters(request_json,task):
                 "backgroundDBSPL": modelGuesses[0],
                 "gainDBSPL": modelGuesses[1],
                 "T": modelGuesses[2],
-                "R": modelGuess[3],
+                "R": modelGuesses[3],
                 "W": modelGuesses[4],
             }
             }
