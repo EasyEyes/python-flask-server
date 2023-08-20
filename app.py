@@ -68,6 +68,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'sampleRate'"
     if "iirLength" not in request_json:
         return 400, "Request body is missing a 'iirLength'"
+    if "num_periods" not in request_json:
+        return 400, "Request body is missing a 'num_periods'"
 
     impulseResponsesJson = request_json["payload"]
     iir_length = request_json["iirLength"]
@@ -77,7 +79,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     componentIRGains = request_json["componentIRGains"]
     componentIRFreqs = request_json["componentIRFreqs"]
     sampleRate = request_json["sampleRate"]
-    result, convolution, ir,frequencies = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,sampleRate)
+    num_periods = request_json["num_periods"]
+    result, convolution, ir,frequencies = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate)
     return 200, {
         str(task): {
                         "iir":result,
@@ -100,6 +103,8 @@ def handle_system_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'sampleRate'"
     if "iirLength" not in request_json:
         return 400, "Request body is missing a 'iirLength'"
+    if "num_periods" not in request_json:
+        return 400, "Request body is missing a 'num_periods'"
 
     impulseResponsesJson = request_json["payload"]
     iir_length = request_json["iirLength"]
@@ -107,7 +112,8 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     lowHz = request_json["lowHz"]
     highHz = request_json["highHz"]
     sampleRate = request_json["sampleRate"]
-    result, convolution, ir = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,sampleRate)
+    num_periods = request_json["num_periods"]
+    result, convolution, ir = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate)
     return 200, {
         str(task): {
                         "iir":result,
