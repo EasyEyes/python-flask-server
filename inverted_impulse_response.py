@@ -85,7 +85,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
 
     return inverse_ir, scale_value, ir_pruned
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate,debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate,debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -135,8 +135,9 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate)
     mls = list(mls.values())
     mls = np.array(mls)
-    mls_pad = np.pad(mls, (0, iir_length), 'constant')
-    convolution = lfilter(inverse_response,1,mls_pad)
+    mls= np.tile(mls, num_periods)
+    #mls_pad = np.pad(mls, (0, iir_length), 'constant')
+    convolution = lfilter(inverse_response,1,mls)
     maximum = max(convolution)
     minimum = abs(min(convolution))
     divisor = 0
@@ -151,7 +152,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
     return inverse_response.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist()
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,sampleRate,debug=False):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,num_periods,sampleRate,debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -167,8 +168,10 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,s
     inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz, iir_length ,sampleRate)
     mls = list(mls.values())
     mls = np.array(mls)
-    mls_pad = np.pad(mls, (0, iir_length), 'constant')
-    convolution = lfilter(inverse_response,1,mls_pad)
+    mls= np.tile(mls, num_periods)
+
+    #mls_pad = np.pad(mls, (0, iir_length), 'constant')
+    convolution = lfilter(inverse_response,1,mls)
     maximum = max(convolution)
     minimum = abs(min(convolution))
     divisor = 0
