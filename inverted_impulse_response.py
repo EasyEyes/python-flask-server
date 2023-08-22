@@ -136,8 +136,8 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     mls = list(mls.values())
     mls = np.array(mls)
     mls= np.tile(mls, num_periods)
-    #mls_pad = np.pad(mls, (0, iir_length), 'constant')
-    convolution = lfilter(inverse_response,1,mls)
+    mls_pad = np.pad(mls, (0, iir_length), 'constant')
+    convolution = lfilter(inverse_response,1,mls_pad)
     maximum = max(convolution)
     minimum = abs(min(convolution))
     divisor = 0
@@ -169,9 +169,8 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,n
     mls = list(mls.values())
     mls = np.array(mls)
     mls= np.tile(mls, num_periods)
-
-    #mls_pad = np.pad(mls, (0, iir_length), 'constant')
-    convolution = lfilter(inverse_response,1,mls)
+    mls_pad = np.pad(mls, (0, iir_length), 'constant')
+    convolution = lfilter(inverse_response,1,mls_pad)
     maximum = max(convolution)
     minimum = abs(min(convolution))
     divisor = 0
