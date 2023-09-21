@@ -48,10 +48,10 @@ def limitInverseResponseBandwidth(inverse_spectrum, fs, limit_ranges):
     frequencies = np.linspace(0,fs,len(inverse_spectrum)+1)[:-1]
     # set gain of freqs below and above the limits to 1. Note it's a two sided spectrum
     for i,freq in enumerate(frequencies):
-        cond1 = (freq < limit_ranges[0]) or (freq > frequencies[-1] - limit_ranges[0])
-        cond2 = (freq > limit_ranges[1]) and (freq < frequencies[-1] - limit_ranges[1])
+        cond1 = (freq < limit_ranges[0]) #or (freq > frequencies[-1] - limit_ranges[0])
+        cond2 = (freq > limit_ranges[1]) #and (freq < frequencies[-1] - limit_ranges[1])
         if cond1 or cond2:
-            inverse_spectrum[i] = 1.
+            inverse_spectrum[i] = 0.
 
     return inverse_spectrum
 
