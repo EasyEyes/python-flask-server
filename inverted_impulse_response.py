@@ -62,6 +62,27 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, target=1000):
     inverse_ir = inverse_ir/scale_value
     return inverse_ir, scale_value
 
+def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000):
+
+    L = iir_length
+    # center original IR and prune it to L samples
+    nfft = len(original_ir)
+    H = np.abs(fft(original_ir))
+    ir_new = np.roll(ifft_sym(H),int(nfft/2))
+    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1))/(L+1)))
+    ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)+np.floor(L/2).astype(int)] # centered around -l/2 to L/2
+    ir_pruned = smoothing_win * ir_pruned
+
+    # calculate inverse from pruned IR, limit to relevant bandwidth and scale
+    nfft = L
+    H = np.abs(fft(ir_pruned))
+    iH = np.conj(H)/(np.conj(H)*H)
+    inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
+    inverse_ir = smoothing_win * inverse_ir
+    inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
+
+    return inverse_ir, scale_value, ir_pruned
+
 def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
 
     L = iir_length
@@ -133,6 +154,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     
     #have my IR here, subtract the microphone/louadspeaker ir from this?
     inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate)
+    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sample_rate)
     mls = list(mls.values())
     mls = np.array(mls)
     mls= np.tile(mls, num_periods)
@@ -150,7 +172,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     return_ir = ir_fft[:len(ir_fft)//2]
     return_freq = frequencies[:len(frequencies)//2]
 
-    return inverse_response.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist()
+    return inverse_response.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist()
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,num_periods,sampleRate,debug=False):
     impulseResponses= impulse_responses_json
@@ -165,7 +187,8 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,n
     else:
         ir = np.array(impulseResponses)
         ir = ir.reshape((ir.shape[1],))
-    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz, iir_length ,sampleRate)
+    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz, iir_length,sampleRate)
+    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sampleRate)
     mls = list(mls.values())
     mls = np.array(mls)
     mls= np.tile(mls, num_periods)
@@ -181,4 +204,4 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,n
 
     convolution_div = convolution/divisor
 
-    return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist()
+    return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist()

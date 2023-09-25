@@ -80,13 +80,14 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     componentIRFreqs = request_json["componentIRFreqs"]
     sampleRate = request_json["sampleRate"]
     num_periods = request_json["num_periods"]
-    result, convolution, ir,frequencies = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate)
+    result, convolution, ir,frequencies, iir_no_bandpass = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate)
     return 200, {
         str(task): {
                         "iir":result,
                         "convolution":convolution,
                         "ir":ir,
-                        "frequencies":frequencies
+                        "frequencies":frequencies,
+                        "iirNoBandpass":iir_no_bandpass
                     }
     }
 
@@ -113,12 +114,13 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     highHz = request_json["highHz"]
     sampleRate = request_json["sampleRate"]
     num_periods = request_json["num_periods"]
-    result, convolution, ir = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate)
+    result, convolution, ir, iir_no_bandpass = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate)
     return 200, {
         str(task): {
                         "iir":result,
                         "convolution":convolution,
-                        "ir":ir
+                        "ir":ir,
+                        "iirNoBandpass":iir_no_bandpass
                     }
     }
 
