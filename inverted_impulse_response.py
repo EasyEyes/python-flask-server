@@ -78,7 +78,7 @@ def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000):
     H = np.abs(fft(ir_pruned))
     iH = np.conj(H)/(np.conj(H)*H)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
-    inverse_ir = smoothing_win * inverse_ir
+    # inverse_ir = smoothing_win * inverse_ir
     inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
 
     return inverse_ir, scale_value, ir_pruned
