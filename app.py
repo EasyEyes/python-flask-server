@@ -195,6 +195,18 @@ def handle_psd_task(request_json,task):
             "y_conv":y_conv.tolist(),
             }
     }
+def handle_background_psd_task(request_json,task):
+    background_rec = request_json["background_rec"]
+    sampleRate = request_json["sampleRate"]
+
+    [x_background, y_background] = plt.psd(background_rec,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
+
+    return 200, {
+        str(task): {
+            "x_background":x_background.tolist(),
+            "y_background":y_background.tolist(),
+            }
+    }
 
 def handle_mls_task(request_json,task):
 
@@ -263,7 +275,8 @@ SUPPORTED_TASKS = {
     'volume-parameters': handle_volume_parameters,
     'psd': handle_psd_task,
     'subtracted-psd':handle_subtracted_psd_task,
-    'mls':handle_mls_task
+    'mls':handle_mls_task,
+    'background-psd': handle_background_psd_task
 }
 
 @app.route("/task/<string:task>", methods=['POST'])
