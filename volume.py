@@ -105,8 +105,8 @@ def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W,componentGainDBSPL): #i
     #2) outDbSpl = 10*math.log10(out_power) #done loudspeaker and background sound
     #3) outDbSpl = CompressorDb(outDbSpl, T_mic, R_mic, W_mic) #define S as S=1/R 
   
-    outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+(gainDbSpl - componentGainDBSPL))/10))
-    #outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+gainDbSpl)/10)) #adding gain and background noise
+    # outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+(gainDbSpl - componentGainDBSPL))/10))
+    outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+gainDbSpl)/10)) #adding gain and background noise
     outDbSpl = CompressorDb(outDbSpl, T, R, W)
     return outDbSpl
 
@@ -192,7 +192,7 @@ def get_model_parameters(inDB,outDBSPL,lCalibFromPeer,componentGainDBSPL):
     rmsError = CalculateRMSError(inDB,outDBSPL,guesses[0],guesses[1],guesses[2],guesses[3],guesses[4],componentGainDBSPL)
     return guesses[0], guesses[1], guesses[2], guesses[3], guesses[4], rmsError, modelGuesses #backgroundDBSPL,gainDBSPL,T,R,W,rmsError, initialGuesses
 
-def run_volume_task_nonlinear(recordedSignalJson, sampleRate,lCalibFromPeer):
+def run_volume_task_nonlinear(recordedSignalJson, sampleRate):
     global lCalib
     lCalib = 0
     sig = np.array(recordedSignalJson, dtype=np.float32)

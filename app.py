@@ -144,7 +144,7 @@ def handle_volume_task_nonlinear(request_json, task):
     recordedSignalJson = request_json["payload"]
     sampleRate = request_json["sample-rate"]
     lCalib = request_json["lCalib"]
-    soundGainDbSPL, P, L, _, L1000, P1000, thd, rms, soundGainDbSPL1000 = run_volume_task_nonlinear(recordedSignalJson, sampleRate,lCalib) #L is outDbSPL
+    soundGainDbSPL, P, L, _, L1000, P1000, thd, rms, soundGainDbSPL1000 = run_volume_task_nonlinear(recordedSignalJson, sampleRate) #L is outDbSPL
   
     return 200, {
         str(task): {
