@@ -184,8 +184,8 @@ def handle_psd_task(request_json,task):
     sampleRate = request_json["sampleRate"]
     print('length of rec')
     print(len(rec_unconv))
-    [x_unconv, y_unconv] = plt.psd(rec_unconv,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
-    [x_conv,y_conv] = plt.psd(rec_conv, Fs=sampleRate, NFFT=2048,scale_by_freq=False)
+    [y_unconv, x_unconv] = plt.psd(rec_unconv,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
+    [y_conv,x_conv] = plt.psd(rec_conv, Fs=sampleRate, NFFT=2048,scale_by_freq=False)
 
     return 200, {
         str(task): {
@@ -199,7 +199,7 @@ def handle_background_psd_task(request_json,task):
     background_rec = request_json["background_rec"]
     sampleRate = request_json["sampleRate"]
 
-    [x_background, y_background] = plt.psd(background_rec,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
+    [y_background, x_background] = plt.psd(background_rec,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
 
     return 200, {
         str(task): {
@@ -257,7 +257,7 @@ def handle_subtracted_psd_task(request_json,task):
     #3) convert rec_fft to linear, invert back to time
     rec = 10**(final_result/20)
     rec = ifft(rec)
-    [x, y] = plt.psd(rec.real,Fs=sample_rate,NFFT=2048,scale_by_freq=False)
+    [y, x] = plt.psd(rec.real,Fs=sample_rate,NFFT=2048,scale_by_freq=False)
     #[x_conv,y_conv] = plt.psd(rec_conv, Fs=96000, scale_by_freq=False)
 
     return 200, {
