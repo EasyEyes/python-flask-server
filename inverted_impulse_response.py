@@ -165,6 +165,10 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     # print("Min convolution value")
     # print(min(convolution))
     maximum = max(convolution)
+    print("Max convolution")
+    print(maximum)
+    print("Min convolution")
+    print(minimum)
     minimum = abs(min(convolution))
     divisor = 0
     if maximum > minimum:
