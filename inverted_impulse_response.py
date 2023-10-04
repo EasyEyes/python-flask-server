@@ -171,6 +171,9 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     minimum = abs(min(convolution))
     print("Min convolution")
     print(minimum)
+    print("Root mean squared of convolution")
+    rms = np.sqrt(np.mean(np.square(convolution)))
+    print(rms)
     divisor = 0
     if maximum > minimum:
         divisor = maximum
@@ -214,6 +217,9 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,n
     minimum = abs(min(convolution))
     print("Min convolution")
     print(minimum)
+    print("Root mean squared of convolution")
+    rms = np.sqrt(np.mean(np.square(convolution)))
+    print(rms)
     divisor = 0
     if maximum > minimum:
         divisor = maximum
