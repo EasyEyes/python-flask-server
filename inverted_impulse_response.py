@@ -160,19 +160,19 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     mls= np.tile(mls, num_periods)
     mls_pad = np.pad(mls, (0, iir_length), 'constant')
     convolution = lfilter(inverse_response,1,mls_pad)
-    print("Max convolution value")
-    print(max(convolution))
-    print("Min convolution value")
-    print(min(convolution))
-    # maximum = max(convolution)
-    # minimum = abs(min(convolution))
-    # divisor = 0
-    # if maximum > minimum:
-    #     divisor = maximum
-    # else:
-    #     divisor = minimum
+    # print("Max convolution value")
+    # print(max(convolution))
+    # print("Min convolution value")
+    # print(min(convolution))
+    maximum = max(convolution)
+    minimum = abs(min(convolution))
+    divisor = 0
+    if maximum > minimum:
+        divisor = maximum
+    else:
+        divisor = minimum
 
-    convolution_div = convolution
+    convolution_div = convolution/divisor
     return_ir = ir_fft[:len(ir_fft)//2]
     return_freq = frequencies[:len(frequencies)//2]
 
@@ -198,18 +198,18 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,n
     mls= np.tile(mls, num_periods)
     mls_pad = np.pad(mls, (0, iir_length), 'constant')
     convolution = lfilter(inverse_response,1,mls_pad)
-    print("Max convolution value")
-    print(max(convolution))
-    print("Min convolution value")
-    print(min(convolution))
-    # maximum = max(convolution)
-    # minimum = abs(min(convolution))
-    # divisor = 0
-    # if maximum > minimum:
-    #     divisor = maximum
-    # else:
-    #     divisor = minimum
+    # print("Max convolution value")
+    # print(max(convolution))
+    # print("Min convolution value")
+    # print(min(convolution))
+    maximum = max(convolution)
+    minimum = abs(min(convolution))
+    divisor = 0
+    if maximum > minimum:
+        divisor = maximum
+    else:
+        divisor = minimum
 
-    convolution_div = convolution
+    convolution_div = convolution/divisor
 
     return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist()
