@@ -174,14 +174,15 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     mls = np.tile(mls,N)
     print('length of tiled mls: ' + str(len(mls)))
     print('length of inverse_response: ' + str(len(inverse_response)))
-    #convolution = lfilter(inverse_response,1,mls)
-    convolution = np.convolve(inverse_response,mls)
+    convolution = lfilter(inverse_response,1,mls)
     print('length of original convolution: ' + str(len(convolution)))
-    start_index = (N-1)*len(orig_mls)
-    print('start index: ' + str(start_index))
-    end_index = -len(inverse_response)
-    print('end index: ' + str(end_index))
-    trimmed_convolution = convolution[start_index:end_index]
+    #convolution = np.convolve(inverse_response,mls)
+    #print('length of original convolution: ' + str(len(convolution)))
+    #start_index = (N-1)*len(orig_mls)
+    #print('start index: ' + str(start_index))
+    #end_index = -len(inverse_response)
+    #print('end index: ' + str(end_index))
+    trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
     convolution_div = trimmed_convolution
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
@@ -245,14 +246,16 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,n
     mls = np.tile(mls,N)
     print('length of tiled mls: ' + str(len(mls)))
     print('length of inverse_response: ' + str(len(inverse_response)))
-    #convolution = lfilter(inverse_response,1,mls)
-    convolution = np.convolve(inverse_response,mls)
+    convolution = lfilter(inverse_response,1,mls)
+    #convolution = np.convolve(inverse_response,mls)
+    #print('length of original convolution: ' + str(len(convolution)))
+   # start_index = (N-1)*len(orig_mls)
+    #print('start index: ' + str(start_index))
+    #end_index = -len(inverse_response)
+    #print('end index: ' + str(end_index))
+    #trimmed_convolution = convolution[start_index:end_index]
     print('length of original convolution: ' + str(len(convolution)))
-    start_index = (N-1)*len(orig_mls)
-    print('start index: ' + str(start_index))
-    end_index = -len(inverse_response)
-    print('end index: ' + str(end_index))
-    trimmed_convolution = convolution[start_index:end_index]
+    trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
     convolution_div = trimmed_convolution
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
