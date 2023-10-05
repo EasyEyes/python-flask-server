@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from scipy.fft import fft, ifft, irfft, fftfreq
 from pickle import loads
 from scipy.signal import lfilter
@@ -61,12 +62,12 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, target=1000):
     scale_value = inverse_spectrum[freq_target_idx]
     inverse_ir = inverse_ir/scale_value
 
-    print('Using spectrum: target ' + str(frequencies[freq_target_idx] + "Hz, scale_value = "+ str(scale_value)))
+    print('Using spectrum: target ' + str(frequencies[freq_target_idx]) + "Hz, scale_value = "+ str(scale_value))
     target = round(target * len(inverse_ir)/fs)/(len(inverse_ir)/fs)
-    ii = np.arange(0,len(inverse_ir)-1)
+    ii = np.arange(0,len(inverse_ir))
     radians = 2*np.pi * target * ii/fs
     a = np.mean(inverse_ir * np.sin(radians))
-    b = np.mean(inverse_ir * np.cos(radian))
+    b = np.mean(inverse_ir * np.cos(radians))
     new_scale_value = 2 * np.sqrt(a**2 + b**2)
     print('Not using spectrum: target ' + str(target) + ' Hz, new_scale_value = ' + str(new_scale_value))
     return inverse_ir, scale_value
