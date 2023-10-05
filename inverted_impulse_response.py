@@ -167,30 +167,49 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sample_rate)
     mls = list(mls.values())
     mls = np.array(mls)
-    mls= np.tile(mls, num_periods)
-    mls_pad = np.pad(mls, (0, iir_length), 'constant')
-    convolution = lfilter(inverse_response,1,mls_pad)
-    # print("Max convolution value")
-    # print(max(convolution))
-    # print("Min convolution value")
-    # print(min(convolution))
-    maximum = max(convolution)
-    print("Max convolution")
-    print(maximum)
+    orig_mls = mls
+    ######new method
+    N = 1 + math.ceil(len(inverse_response)/len(mls))
+    print('N: ' + str(N))
+    mls = np.tile(mls,N)
+    print('length of tiled mls: ' + str(len(mls)))
+    print('length of inverse_response: ' + str(len(inverse_response)))
+    #convolution = lfilter(inverse_response,1,mls)
+    convolution = np.convolve(inverse_response,mls)
+    print('length of original convolution: ' + str(len(convolution)))
+    start_index = (N-1)*len(orig_mls)
+    print('start index: ' + str(start_index))
+    end_index = -len(inverse_response)
+    print('end index: ' + str(end_index))
+    trimmed_convolution = convolution[start_index:end_index]
+    convolution_div = trimmed_convolution
+    print('length of convolution: ' + str(len(trimmed_convolution)))
+    print(len(trimmed_convolution))
 
-    minimum = abs(min(convolution))
-    print("Min convolution")
-    print(minimum)
-    print("Root mean squared of convolution")
-    rms = np.sqrt(np.mean(np.square(convolution)))
-    print(rms)
-    divisor = 0
-    if maximum > minimum:
-        divisor = maximum
-    else:
-        divisor = minimum
+    #########
 
-    convolution_div = convolution
+    ##########old method 
+    # mls= np.tile(mls, num_periods)
+    # mls_pad = np.pad(mls, (0, iir_length), 'constant')
+    # convolution = lfilter(inverse_response,1,mls_pad)
+
+    # print("Max convolution")
+    # maximum = max(convolution)
+    # print(maximum)
+    # minimum = abs(min(convolution))
+    # print("Min convolution")
+    # print(minimum)
+    # print("Root mean squared of convolution")
+    # rms = np.sqrt(np.mean(np.square(convolution)))
+    # print(rms)
+    # divisor = 0
+    # if maximum > minimum:
+    #     divisor = maximum
+    # else:
+    #     divisor = minimum
+
+    # convolution_div = convolution
+    #############
     return_ir = ir_fft[:len(ir_fft)//2]
     return_freq = frequencies[:len(frequencies)//2]
 
@@ -213,29 +232,47 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,n
     inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sampleRate)
     mls = list(mls.values())
     mls = np.array(mls)
-    mls= np.tile(mls, num_periods)
-    mls_pad = np.pad(mls, (0, iir_length), 'constant')
-    convolution = lfilter(inverse_response,1,mls_pad)
-    # print("Max convolution value")
-    # print(max(convolution))
-    # print("Min convolution value")
-    # print(min(convolution))
+    orig_mls = mls
+    ######new method
+    N = 1 + math.ceil(len(inverse_response)/len(mls))
+    print('N: ' + str(N))
+    mls = np.tile(mls,N)
+    print('length of tiled mls: ' + str(len(mls)))
+    print('length of inverse_response: ' + str(len(inverse_response)))
+    #convolution = lfilter(inverse_response,1,mls)
+    convolution = np.convolve(inverse_response,mls)
+    print('length of original convolution: ' + str(len(convolution)))
+    start_index = (N-1)*len(orig_mls)
+    print('start index: ' + str(start_index))
+    end_index = -len(inverse_response)
+    print('end index: ' + str(end_index))
+    trimmed_convolution = convolution[start_index:end_index]
+    convolution_div = trimmed_convolution
+    print('length of convolution: ' + str(len(trimmed_convolution)))
+    print(len(trimmed_convolution))
+    #########
 
-    print("Max convolution")
-    maximum = max(convolution)
-    print(maximum)
-    minimum = abs(min(convolution))
-    print("Min convolution")
-    print(minimum)
-    print("Root mean squared of convolution")
-    rms = np.sqrt(np.mean(np.square(convolution)))
-    print(rms)
-    divisor = 0
-    if maximum > minimum:
-        divisor = maximum
-    else:
-        divisor = minimum
+    ##########old method 
+    # mls= np.tile(mls, num_periods)
+    # mls_pad = np.pad(mls, (0, iir_length), 'constant')
+    # convolution = lfilter(inverse_response,1,mls_pad)
 
-    convolution_div = convolution
+    # print("Max convolution")
+    # maximum = max(convolution)
+    # print(maximum)
+    # minimum = abs(min(convolution))
+    # print("Min convolution")
+    # print(minimum)
+    # print("Root mean squared of convolution")
+    # rms = np.sqrt(np.mean(np.square(convolution)))
+    # print(rms)
+    # divisor = 0
+    # if maximum > minimum:
+    #     divisor = maximum
+    # else:
+    #     divisor = minimum
+
+    # convolution_div = convolution
+    #############
 
     return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist()
