@@ -186,6 +186,12 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
 
+
+    maximum = max(convolution_div)
+    minimum = min(convolution_div)
+    print("Max value convolution: " + str(maximum))
+    print("Min value convolution: " + str(minimum))
+
     #########
 
     ##########old method 
@@ -250,6 +256,11 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,n
     convolution_div = trimmed_convolution
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
+
+    maximum = max(convolution_div)
+    minimum = min(convolution_div)
+    print("Max value convolution: " + str(maximum))
+    print("Min value convolution: " + str(minimum))
     #########
 
     ##########old method 
