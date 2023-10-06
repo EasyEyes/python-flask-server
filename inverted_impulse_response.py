@@ -65,7 +65,6 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, targetHz=1000):
     print('Using both inverse_ir and inverse_spectrum: targetHz ' + str(frequencies[freq_target_idx]) + ", scale_value = "+ str(scale_value))
 
     # New method, using only inverse_ir.
-    import numpy as np
     # Use frequency closest to requested targetHz that has an integer  
     # number of periods in inverse_ir.
     targetHz = round(targetHz * len(inverse_ir)/fs) / (len(inverse_ir)/fs)
