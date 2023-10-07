@@ -73,7 +73,7 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, targetHz=1000):
     a = np.sum(inverse_ir * np.sin(radians))
     b = np.sum(inverse_ir * np.cos(radians))
     scale_value = np.sqrt(a**2 + b**2)
-    print('Using only inverse_ir: targetHz {targetHz:.3f}; scale_value={scale_value:.3f}')
+    print(f'Using only inverse_ir: targetHz {targetHz:.3f}; scale_value={scale_value:.3f}')
 
     inverse_ir = inverse_ir/scale_value
     return inverse_ir, scale_value
