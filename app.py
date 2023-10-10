@@ -208,6 +208,18 @@ def handle_background_psd_task(request_json,task):
             }
     }
 
+def handle_mls_psd_task(request_json,task):
+    mls = request_json["mls"]
+    sampleRate = request_json["sampleRate"]
+    [y_mls, x_mls] = plt.psd(mls,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
+
+    return 200, {
+        str(task): {
+            "x_mls":x_mls.tolist(),
+            "y_mls":y_mls.tolist(),
+            }
+    }
+
 def handle_mls_task(request_json,task):
 
     #length of mls will be 2**nbits - 1
@@ -276,7 +288,8 @@ SUPPORTED_TASKS = {
     'psd': handle_psd_task,
     'subtracted-psd':handle_subtracted_psd_task,
     'mls':handle_mls_task,
-    'background-psd': handle_background_psd_task
+    'background-psd': handle_background_psd_task,
+    'mls-psd': handle_mls_psd_task
 }
 
 @app.route("/task/<string:task>", methods=['POST'])
