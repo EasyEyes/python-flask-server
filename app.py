@@ -4,7 +4,8 @@ import tracemalloc
 import psutil
 
 import matplotlib.pyplot as plt
-
+import matplotlib
+matplotlib.use("Agg")
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
@@ -80,7 +81,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     componentIRFreqs = request_json["componentIRFreqs"]
     sampleRate = request_json["sampleRate"]
     num_periods = request_json["num_periods"]
-    result, convolution, ir,frequencies, iir_no_bandpass = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate)
+    calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
+    result, convolution, ir,frequencies, iir_no_bandpass = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb)
     return 200, {
         str(task): {
                         "iir":result,
@@ -114,7 +116,8 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     highHz = request_json["highHz"]
     sampleRate = request_json["sampleRate"]
     num_periods = request_json["num_periods"]
-    result, convolution, ir, iir_no_bandpass = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate)
+    calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
+    result, convolution, ir, iir_no_bandpass = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, calibrateSoundBurstDb)
     return 200, {
         str(task): {
                         "iir":result,
@@ -224,14 +227,16 @@ def handle_mls_task(request_json,task):
 
     #length of mls will be 2**nbits - 1
     desired_length = request_json["length"]
+    calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
     nbits = math.ceil(math.log(desired_length + 1, 2))
     ret_arr = max_len_seq(nbits,length=desired_length)
     mls = ret_arr[0]
     mls_transformed = np.where(mls == 0, -1, 1)
-    
+    scaled_mls_transformed = mls_transformed * calibrateSoundBurstDb
     return 200, {
         str(task):{
-            "mls":mls_transformed.tolist()
+            "mls": scaled_mls_transformed.tolist(),
+            "unscaledMLS": mls_transformed.tolist()
         }
     }
 

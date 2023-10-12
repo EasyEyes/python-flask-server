@@ -122,7 +122,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
 
     return inverse_ir, scale_value, ir_pruned
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate,debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -189,7 +189,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     #end_index = -len(inverse_response)
     #print('end index: ' + str(end_index))
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
-    convolution_div = trimmed_convolution
+    convolution_div = trimmed_convolution * calibrateSoundBurstDb
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
 
@@ -228,7 +228,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
     return inverse_response.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist()
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,num_periods,sampleRate,debug=False):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,num_periods,sampleRate, calibrateSoundBurstDb, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -262,7 +262,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,n
     #trimmed_convolution = convolution[start_index:end_index]
     print('length of original convolution: ' + str(len(convolution)))
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
-    convolution_div = trimmed_convolution
+    convolution_div = trimmed_convolution * calibrateSoundBurstDb
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
 
