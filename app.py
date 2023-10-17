@@ -4,7 +4,8 @@ import tracemalloc
 import psutil
 
 import matplotlib.pyplot as plt
-
+import matplotlib
+matplotlib.use("Agg")
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task

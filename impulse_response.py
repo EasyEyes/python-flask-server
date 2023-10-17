@@ -97,7 +97,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     L_new_n = b + n_periods*(L_new-1) - 1; % L_new_n is L_new of n_periods
     dL_n = L_new_n - n_periods*L;
     '''
-    num_periods = num_periods-1 
+    # num_periods = num_periods-1 
     left = num_periods*(L_new-1)
     right = num_periods*(L_new+1)
     print("Searching for n-th peak in range " + str(left) + " to " + str(right) + " in array of length " + str(len(output_autocorrelation)))
