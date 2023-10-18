@@ -97,7 +97,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     L_new_n = b + n_periods*(L_new-1) - 1; % L_new_n is L_new of n_periods
     dL_n = L_new_n - n_periods*L;
     '''
-    # num_periods = num_periods-1 
+    num_periods = num_periods-1 
     left = num_periods*(L_new-1)
     right = num_periods*(L_new+1)
     print("Searching for n-th peak in range " + str(left) + " to " + str(right) + " in array of length " + str(len(output_autocorrelation)))
@@ -218,8 +218,8 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
     out_mls2 = out_mls2_n(1+L:2*L);
     OUT_MLS2 = fft(out_mls2);
     '''
-    #out_mls2 = out_mls2_n[L:2*L]
-    out_mls2 = out_mls2_n[0:L]
+    out_mls2 = out_mls2_n[L:2*L]
+    # out_mls2 = out_mls2_n[0:L]
     print("Length of out_mls2= " + str(len(out_mls2)))
     OUT_MLS2 = fft(out_mls2)
     print("Length of OUT_MLS2= " + str(len(OUT_MLS2)))
