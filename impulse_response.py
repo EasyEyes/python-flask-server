@@ -244,7 +244,7 @@ Tests
 '''
 
 def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=False):
-    num_periods = num_periods-1 
+    NUM_PERIODS = NUM_PERIODS-1 
     print("number of period ", NUM_PERIODS)
     sig = np.array(sig)
     # mls = list(mls.values())
