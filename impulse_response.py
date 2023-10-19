@@ -62,8 +62,8 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     ouptut_autocorrelation = ifft(output_spectrum .* conj(output_spectrum), 'symmetric');
     % ouptut_autocorrelation corresponds to Fig.5 of the paper. 
     '''
-    if num_periods < 2:
-        print("Error, asynchronous algorithm requires atleast 2 periods")
+    if num_periods < 1:
+        print("Error, asynchronous algorithm requires at least 2 periods")
 
     # output_spectrum = np.array(fft(output_signal), dtype=complex)
     output_spectrum = fft(output_signal)
@@ -89,7 +89,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     output_autocorrelation[0:1000] = 0
     L_new = np.argmax(output_autocorrelation[:output_signal.size//2]) + 1
     print("L=" + str(L) + ", L_new=" + str(L_new) + ", based on second peak")
-    print("Autocorr at 2nd peak="+str(output_autocorrelation[L_new-1]/corrZero)+", predicted="+str(1-1/(num_periods-1)))
+    print("Autocorr at 2nd peak="+str(output_autocorrelation[L_new-1]/corrZero)+", predicted="+str(1-1/num_periods))
     '''
     % find the n-th peak in ouptut_autocorrelation
     % Proceeding a n-th peak increases the precision of estimation
