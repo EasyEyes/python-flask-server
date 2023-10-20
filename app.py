@@ -4,8 +4,8 @@ import tracemalloc
 import psutil
 
 import matplotlib.pyplot as plt
-# import matplotlib
-# matplotlib.use("Agg")
+import matplotlib
+matplotlib.use("Agg")
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
@@ -243,38 +243,38 @@ def handle_mls_task(request_json,task):
 def handle_subtracted_psd_task(request_json,task):
     #print(request_json);
     rec = request_json["rec"]
-    knownGain = request_json["knownGains"]
-    knownFreq = request_json["knownFrequencies"]
+    # knownGain = request_json["knownGains"]
+    # knownFreq = request_json["knownFrequencies"]
     sample_rate = request_json["sampleRate"]
 
-    rec_fft = fft(rec)
-    num_samples = len(rec)
-    frequencies = fftfreq(num_samples,1/sample_rate)
+    # rec_fft = fft(rec)
+    # num_samples = len(rec)
+    # frequencies = fftfreq(num_samples,1/sample_rate)
 
     #interpolation part
     #1) convert rec_fft to dB
-    rec_fft_db = 20*np.log10(abs(rec_fft))
+    # rec_fft_db = 20*np.log10(abs(rec_fft))
     #2) interpolate and subtract
     #interpolate function for componentGains and componentFreqs
-    interp_func = interp1d(knownFreq,knownGain)
+    # interp_func = interp1d(knownFreq,knownGain)
 
     #3) some sorting to make sure gains and frequencies are in sorted order when returned
-    min_freq = min(knownFreq)
-    max_freq = max(knownFreq)
-    inbounds_indices = np.where((abs(frequencies) >= min_freq) & (abs(frequencies) <= max_freq))
-    outbounds_indices = np.where((abs(frequencies) <= min_freq) & (abs(frequencies) >= max_freq))
-    inbounds_frequencies = abs(frequencies[inbounds_indices])
-    inbounds_rec_fft_db = rec_fft_db[inbounds_indices]
-    interp_gain2 = interp_func(inbounds_frequencies)
-    result = inbounds_rec_fft_db - interp_gain2
-    final_result = np.zeros_like(frequencies)
-    final_result[inbounds_indices] = result
-    final_result[outbounds_indices] = rec_fft_db[outbounds_indices]
+    # min_freq = min(knownFreq)
+    # max_freq = max(knownFreq)
+    # inbounds_indices = np.where((abs(frequencies) >= min_freq) & (abs(frequencies) <= max_freq))
+    # outbounds_indices = np.where((abs(frequencies) < min_freq) | (abs(frequencies) > max_freq))
+    # inbounds_frequencies = abs(frequencies[inbounds_indices])
+    # inbounds_rec_fft_db = rec_fft_db[inbounds_indices]
+    # interp_gain2 = interp_func(inbounds_frequencies)
+    # result = inbounds_rec_fft_db - interp_gain2
+    # final_result = np.zeros_like(frequencies)
+    # final_result[inbounds_indices] = result
+    # final_result[outbounds_indices] = rec_fft_db[outbounds_indices]
 
     #3) convert rec_fft to linear, invert back to time
-    rec = 10**(final_result/20)
-    rec = ifft(rec)
-    [y, x] = plt.psd(rec.real,Fs=sample_rate,NFFT=2048,scale_by_freq=False)
+    # rec = 10**(final_result/20)
+    # rec = ifft(rec)
+    [y, x] = plt.psd(rec,Fs=sample_rate,NFFT=2048,scale_by_freq=False)
     #[x_conv,y_conv] = plt.psd(rec_conv, Fs=96000, scale_by_freq=False)
 
     return 200, {
