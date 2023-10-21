@@ -82,14 +82,15 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     sampleRate = request_json["sampleRate"]
     num_periods = request_json["num_periods"]
     calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
-    result, convolution, ir,frequencies, iir_no_bandpass = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb)
+    result, convolution, ir,frequencies, iir_no_bandpass, convolution_test = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb)
     return 200, {
         str(task): {
                         "iir":result,
                         "convolution":convolution,
                         "ir":ir,
                         "frequencies":frequencies,
-                        "iirNoBandpass":iir_no_bandpass
+                        "iirNoBandpass":iir_no_bandpass,
+                        "convolutionTest": convolution_test
                     }
     }
 
