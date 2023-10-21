@@ -78,7 +78,7 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, targetHz=1000):
     inverse_ir = inverse_ir/scale_value
     return inverse_ir, scale_value
 
-def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000,componentIRFreqs = None, componentIRGains = None):
+def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000, componentIRFreqs = None, componentIRGains = None):
 
     L = iir_length
     # center original IR and prune it to L samples
@@ -111,7 +111,7 @@ def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000,component
         H_spkr[outbounds_indices] = H[outbounds_indices]
     else:
         H_spkr = H
-
+        
     iH = np.conj(H_spkr)/(np.conj(H_spkr)*H_spkr)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
     inverse_ir = smoothing_win * inverse_ir
@@ -211,18 +211,44 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
     
     #have my IR here, subtract the microphone/louadspeaker ir from this?
-    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate, componentIRGains, componentIRFreqs)
-    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sample_rate, componentIRGains, componentIRFreqs)
+    inverse_response_component, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate, componentIRFreqs,componentIRGains)
+    inverse_response_system, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate)
+    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sample_rate, componentIRFreqs, componentIRGains)
     # mls = list(mls.values())
     mls = np.array(mls)
     orig_mls = mls
-    ######new method
-    N = 1 + math.ceil(len(inverse_response)/len(mls))
+    ######new method system
+    N = 1 + math.ceil(len(inverse_response_system)/len(mls))
     print('N: ' + str(N))
     mls = np.tile(mls,N)
     print('length of tiled mls: ' + str(len(mls)))
-    print('length of inverse_response: ' + str(len(inverse_response)))
-    convolution = lfilter(inverse_response,1,mls)
+    print('length of system inverse_response: ' + str(len(inverse_response_system)))
+    convolution = lfilter(inverse_response_system,1,mls)
+    print('length of original system convolution: ' + str(len(convolution)))
+    #convolution = np.convolve(inverse_response,mls)
+    #print('length of original convolution: ' + str(len(convolution)))
+    #start_index = (N-1)*len(orig_mls)
+    #print('start index: ' + str(start_index))
+    #end_index = -len(inverse_response)
+    #print('end index: ' + str(end_index))
+    trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
+    convolution_div = trimmed_convolution * calibrateSoundBurstDb
+    print('length of system convolution: ' + str(len(trimmed_convolution)))
+    print(len(trimmed_convolution))
+
+
+    maximum = max(convolution_div)
+    minimum = min(convolution_div)
+    print("Max value system convolution: " + str(maximum))
+    print("Min value system convolution: " + str(minimum))
+
+    ######### component
+    N = 1 + math.ceil(len(inverse_response_component)/len(mls))
+    print('N: ' + str(N))
+    mls = np.tile(mls,N)
+    print('length of tiled mls: ' + str(len(mls)))
+    print('length of inverse_response: ' + str(len(inverse_response_component)))
+    convolution = lfilter(inverse_response_component,1,mls)
     print('length of original convolution: ' + str(len(convolution)))
     #convolution = np.convolve(inverse_response,mls)
     #print('length of original convolution: ' + str(len(convolution)))
@@ -238,11 +264,8 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
     maximum = max(convolution_div)
     minimum = min(convolution_div)
-    print("Max value convolution: " + str(maximum))
-    print("Min value convolution: " + str(minimum))
-
-    #########
-
+    print("Max value component convolution: " + str(maximum))
+    print("Min value component convolution: " + str(minimum))
     ##########old method 
     # mls= np.tile(mls, num_periods)
     # mls_pad = np.pad(mls, (0, iir_length), 'constant')
@@ -268,7 +291,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     return_ir = ir_fft[:len(ir_fft)//2]
     return_freq = frequencies[:len(frequencies)//2]
 
-    return inverse_response.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist()
+    return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist()
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,num_periods,sampleRate, calibrateSoundBurstDb, debug=False):
     impulseResponses= impulse_responses_json
