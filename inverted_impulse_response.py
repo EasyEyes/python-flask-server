@@ -208,12 +208,13 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     # #ir = ifft(ir)
     # nfft = len(ir)
     # ir = np.roll(ifft_sym(ir),int(nfft/2))
-
+    testComponentIRFreqs = [20,1000,2000,3000,5000,8000,10000,12000,14000,16000,18000,20000]
+    testComponentIRGains = [0,0,-20,-20,0,0,0,0,0,0,0,0]
     
     #have my IR here, subtract the microphone/louadspeaker ir from this?
-    inverse_response_component, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate, componentIRFreqs,componentIRGains)
+    inverse_response_component, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate, testComponentIRFreqs,testComponentIRGains)
     inverse_response_system, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate)
-    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sample_rate, componentIRFreqs, componentIRGains)
+    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sample_rate, testComponentIRFreqs, testComponentIRGains)
     # mls = list(mls.values())
     mls = np.array(mls)
     orig_mls = mls
