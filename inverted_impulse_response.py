@@ -92,34 +92,15 @@ def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000, componen
     # calculate inverse from pruned IR, limit to relevant bandwidth and scale
     nfft = L
     H = np.abs(fft(ir_pruned))
-    num_samples = len(H)
-    frequencies = fftfreq(num_samples,1/fs)
-
-    if componentIRFreqs is not None:
-        interp_func = interp1d(componentIRFreqs,componentIRGains)
-        min_freq = min(componentIRFreqs)
-        max_freq = max(componentIRFreqs)
-        inbounds_indices = np.where((abs(frequencies) >= min_freq) & (abs(frequencies) <= max_freq))
-        outbounds_indices = np.where((abs(frequencies) < min_freq) | (abs(frequencies) > max_freq))
-        inbounds_frequencies = abs(frequencies[inbounds_indices])
-        inbounds_H = H[inbounds_indices]
-        interp_gain = interp_func(inbounds_frequencies)
-        H_mic = 10**(interp_gain/20)
-        result = inbounds_H / np.abs(H_mic)
-        H_spkr = np.zeros_like(frequencies)
-        H_spkr[inbounds_indices] = result
-        H_spkr[outbounds_indices] = H[outbounds_indices]
-    else:
-        H_spkr = H
         
-    iH = np.conj(H_spkr)/(np.conj(H_spkr)*H_spkr)
+    iH = np.conj(H)/(np.conj(H)*H)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
     inverse_ir = smoothing_win * inverse_ir
     inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
 
     return inverse_ir, scale_value, ir_pruned
 
-def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000,componentIRFreqs = None ,componentIRGains = None):
+def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
 
     L = iir_length
     # center original IR and prune it to L samples
@@ -133,29 +114,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000,co
     # calculate inverse from pruned IR, limit to relevant bandwidth and scale
     nfft = L
     H = np.abs(fft(ir_pruned))
-    num_samples = len(H)
-    frequencies = fftfreq(num_samples,1/fs)
-
-    if componentIRFreqs is not None:
-        print('Calculating component iir')
-        interp_func = interp1d(componentIRFreqs,componentIRGains)
-        min_freq = min(componentIRFreqs)
-        max_freq = max(componentIRFreqs)
-        inbounds_indices = np.where((abs(frequencies) >= min_freq) & (abs(frequencies) <= max_freq))
-        outbounds_indices = np.where((abs(frequencies) < min_freq) | (abs(frequencies) > max_freq))
-        inbounds_frequencies = abs(frequencies[inbounds_indices])
-        inbounds_H = H[inbounds_indices]
-        interp_gain = interp_func(inbounds_frequencies)
-        H_mic = 10**(interp_gain/20)
-        result = inbounds_H / np.abs(H_mic)
-        H_spkr = np.zeros_like(frequencies)
-        H_spkr[inbounds_indices] = result
-        H_spkr[outbounds_indices] = H[outbounds_indices]
-    else:
-        print('Calculating system iir')
-        H_spkr = H
-
-    iH = np.conj(H_spkr)/(np.conj(H_spkr)*H_spkr)
+    iH = np.conj(H)/(np.conj(H)*H)
     limit_ranges = [lowHz, highHz] #was 100 and 16000
     iH = limitInverseResponseBandwidth(iH, fs, limit_ranges)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
@@ -163,6 +122,29 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000,co
     inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
 
     return inverse_ir, scale_value, ir_pruned
+
+def splitter(system_ir, componentIRFreqs, componentIRGains, fs = 96000):
+    H = np.abs(fft(system_ir))
+    nfft = len(system_ir)
+    num_samples = len(H)
+    # linear interpolate component gain within range
+    frequencies = fftfreq(num_samples, 1/fs)
+    interp_func = interp1d(componentIRFreqs,componentIRGains)
+    min_freq = min(componentIRFreqs)
+    max_freq = max(componentIRFreqs)
+    inbounds_indices = np.where((abs(frequencies) >= min_freq) & (abs(frequencies) <= max_freq))
+    outbounds_indices = np.where((abs(frequencies) < min_freq) | (abs(frequencies) > max_freq))
+    inbounds_frequencies = abs(frequencies[inbounds_indices])
+    inbounds_H = H[inbounds_indices]
+    interp_gain = interp_func(inbounds_frequencies)
+    H_component = 10**(interp_gain/20)
+    result = inbounds_H / np.abs(H_component)
+    H_spkr = np.zeros_like(frequencies)
+    H_spkr[inbounds_indices] = result
+    H_spkr[outbounds_indices] = H[outbounds_indices]
+    ir_component = np.roll(ifft_sym(H_spkr),int(nfft/2))
+    return ir_component
+
 
 def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, debug=False):
     impulseResponses= impulse_responses_json
@@ -179,8 +161,6 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
         ir = ir.reshape((ir.shape[1],))
     ir_fft = fft(ir)
     sample_rate = sampleRate
-    num_samples = len(ir)
-    frequencies = fftfreq(num_samples,1/sample_rate)
     
     #interpolation part
     #1) convert ir_fft to dB
@@ -210,11 +190,14 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     # ir = np.roll(ifft_sym(ir),int(nfft/2))
     testComponentIRFreqs = [20,1999,2000,4000,4001,20000]
     testComponentIRGains = [0,0,-20,-20,0,0]
-    
+    ir_component = splitter(ir, componentIRFreqs, componentIRGains, sample_rate)
+    ir_test = splitter(ir, testComponentIRFreqs, testComponentIRGains, sample_rate)
+    num_samples = len(ir_component)
+    frequencies = fftfreq(num_samples,1/sample_rate)
     #have my IR here, subtract the microphone/louadspeaker ir from this?
-    inverse_response_test, _, _ = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate, testComponentIRFreqs,testComponentIRGains)
-    inverse_response_component, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz,iir_length, sample_rate, componentIRFreqs,componentIRGains)
-    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sample_rate, componentIRFreqs, componentIRGains)
+    inverse_response_test, _, _ = calculateInverseIR(ir_test,lowHz,highHz,iir_length, sample_rate)
+    inverse_response_component, scale, ir_pruned = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sample_rate)
+    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir_component,iir_length,sample_rate)
     # mls = list(mls.values())
     mls = np.array(mls)
     orig_mls = mls
@@ -278,12 +261,13 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
     # convolution_div = convolution
     #############
+    ir_fft = fft(ir_component)
     return_ir = ir_fft[:len(ir_fft)//2]
     return_freq = frequencies[:len(frequencies)//2]
 
     return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), convolution_div_test.tolist()
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz,num_periods,sampleRate, calibrateSoundBurstDb, debug=False):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, calibrateSoundBurstDb, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
