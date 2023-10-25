@@ -48,7 +48,7 @@ def handle_impulse_response_task(request_json, task):
     ir, autocorrelation = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished IR Task, time taken to run function: {elapsed_time} seconds")
+    print(f"============== handle_impulse_response task, time taken: {elapsed_time}s ==============")
     return 200, {
         str(task): {
             'ir':ir,
@@ -89,7 +89,7 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     result, convolution, ir,frequencies, iir_no_bandpass, convolution_test = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished component_inverse_impulse_response Task, time taken to run function: {elapsed_time} seconds")
+    print(f"============== component_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
     return 200, {
         str(task): {
                         "iir":result,
