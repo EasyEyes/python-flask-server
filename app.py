@@ -6,6 +6,7 @@ import psutil
 import matplotlib.pyplot as plt
 # import matplotlib
 # matplotlib.use("Agg")
+import time
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task
@@ -25,6 +26,7 @@ process = psutil.Process(os.getpid())
 tracemalloc.start()
 
 def handle_impulse_response_task(request_json, task):
+    start_time = time.time()
     if "payload" not in request_json:
         return 400, "Request Body is missing a 'payload' entry"
     if "sample-rate" not in request_json:
@@ -44,7 +46,9 @@ def handle_impulse_response_task(request_json, task):
     NUM_PERIODS = int(NUM_PERIODS)
     print("Starting IR Task")
     ir, autocorrelation = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
-    print("Finished IR Task")
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished IR Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task): {
             'ir':ir,
@@ -71,7 +75,7 @@ def handle_component_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'iirLength'"
     if "num_periods" not in request_json:
         return 400, "Request body is missing a 'num_periods'"
-
+    start_time = time.time()
     impulseResponsesJson = request_json["payload"]
     iir_length = request_json["iirLength"]
     mls = request_json["mls"]
@@ -83,6 +87,9 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     num_periods = request_json["num_periods"]
     calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
     result, convolution, ir,frequencies, iir_no_bandpass, convolution_test = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished component_inverse_impulse_response Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task): {
                         "iir":result,
@@ -95,6 +102,7 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     }
 
 def handle_system_inverse_impulse_response_task(request_json, task):
+    start_time = time.time()
     if "payload" not in request_json:
         return 400, "Request Body is missing a 'payload' entry"
     if "mls" not in request_json:
@@ -119,6 +127,9 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     num_periods = request_json["num_periods"]
     calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
     result, convolution, ir, iir_no_bandpass = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, calibrateSoundBurstDb)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished system_inverse_impulse_response Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task): {
                         "iir":result,
@@ -129,6 +140,7 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     }
 
 def handle_volume_task(request_json, task):
+    start_time = time.time()
     if "payload" not in request_json:
         return 400, "Request Body is missing a 'payload' entry"
     if "sample-rate" not in request_json:
@@ -141,6 +153,7 @@ def handle_volume_task(request_json, task):
     }
 
 def handle_volume_task_nonlinear(request_json, task):
+    start_time = time.time()
     if "payload" not in request_json:
         return 400, "Request Body is missing a 'payload' entry"
     if "sample-rate" not in request_json:
@@ -149,7 +162,9 @@ def handle_volume_task_nonlinear(request_json, task):
     sampleRate = request_json["sample-rate"]
     lCalib = request_json["lCalib"]
     soundGainDbSPL, P, L, _, L1000, P1000, thd, rms, soundGainDbSPL1000 = run_volume_task_nonlinear(recordedSignalJson, sampleRate) #L is outDbSPL
-  
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished volume_task_nonlinear Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task): {
             "outDbSPL":L,
@@ -159,11 +174,15 @@ def handle_volume_task_nonlinear(request_json, task):
     }
 
 def handle_volume_parameters(request_json,task):
+    start_time = time.time()
     inDB = request_json["inDBValues"]
     outDBSPL = request_json["outDBSPLValues"]
     lCalib = request_json["lCalib"]
     componentGainDBSPL = request_json["componentGainDBSPL"]
     backgroundDBSPL, gainDBSPL, T, R, W, rmsError, modelGuesses = get_model_parameters(inDB,outDBSPL,lCalib,componentGainDBSPL)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished handle_volume_parameters Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task): {
             "backgroundDBSPL":backgroundDBSPL,
@@ -183,6 +202,7 @@ def handle_volume_parameters(request_json,task):
     }
 
 def handle_psd_task(request_json,task):
+    start_time = time.time()
     rec_unconv = request_json["unconv_rec"]
     rec_conv = request_json["conv_rec"]
     sampleRate = request_json["sampleRate"]
@@ -190,7 +210,9 @@ def handle_psd_task(request_json,task):
     print(len(rec_unconv))
     [y_unconv, x_unconv] = plt.psd(rec_unconv,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
     [y_conv,x_conv] = plt.psd(rec_conv, Fs=sampleRate, NFFT=2048,scale_by_freq=False)
-
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished psd of recordings Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task): {
             "x_unconv":x_unconv.tolist(),
@@ -200,11 +222,14 @@ def handle_psd_task(request_json,task):
             }
     }
 def handle_background_psd_task(request_json,task):
+    start_time = time.time()
     background_rec = request_json["background_rec"]
     sampleRate = request_json["sampleRate"]
 
     [y_background, x_background] = plt.psd(background_rec,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
-
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished psd of background noise Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task): {
             "x_background":x_background.tolist(),
@@ -213,10 +238,13 @@ def handle_background_psd_task(request_json,task):
     }
 
 def handle_mls_psd_task(request_json,task):
+    start_time = time.time()
     mls = request_json["mls"]
     sampleRate = request_json["sampleRate"]
     [y_mls, x_mls] = plt.psd(mls,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
-
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished psd of mls Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task): {
             "x_mls":x_mls.tolist(),
@@ -225,7 +253,7 @@ def handle_mls_psd_task(request_json,task):
     }
 
 def handle_mls_task(request_json,task):
-
+    start_time = time.time()
     #length of mls will be 2**nbits - 1
     desired_length = request_json["length"]
     calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
@@ -234,6 +262,9 @@ def handle_mls_task(request_json,task):
     mls = ret_arr[0]
     mls_transformed = np.where(mls == 0, -1, 1)
     scaled_mls_transformed = mls_transformed * calibrateSoundBurstDb
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished generate mls Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task):{
             "mls": scaled_mls_transformed.tolist(),
@@ -242,6 +273,7 @@ def handle_mls_task(request_json,task):
     }
 
 def handle_subtracted_psd_task(request_json,task):
+    start_time = time.time()
     #print(request_json);
     rec = request_json["rec"]
     # knownGain = request_json["knownGains"]
@@ -277,7 +309,9 @@ def handle_subtracted_psd_task(request_json,task):
     # rec = ifft(rec)
     [y, x] = plt.psd(rec,Fs=sample_rate,NFFT=2048,scale_by_freq=False)
     #[x_conv,y_conv] = plt.psd(rec_conv, Fs=96000, scale_by_freq=False)
-
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Finished psd Task, time taken to run function: {elapsed_time} seconds")
     return 200, {
         str(task): {
             "x":x.tolist(),
