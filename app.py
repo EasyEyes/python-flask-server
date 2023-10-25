@@ -129,7 +129,7 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     result, convolution, ir, iir_no_bandpass = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, calibrateSoundBurstDb)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished system_inverse_impulse_response Task, time taken to run function: {elapsed_time} seconds")
+    print(f"============== system_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
     return 200, {
         str(task): {
                         "iir":result,
@@ -164,7 +164,7 @@ def handle_volume_task_nonlinear(request_json, task):
     soundGainDbSPL, P, L, _, L1000, P1000, thd, rms, soundGainDbSPL1000 = run_volume_task_nonlinear(recordedSignalJson, sampleRate) #L is outDbSPL
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished volume_task_nonlinear Task, time taken to run function: {elapsed_time} seconds")
+    print(f"==============  volume_task_nonlinear task, time taken: {elapsed_time}s ==============")
     return 200, {
         str(task): {
             "outDbSPL":L,
@@ -182,7 +182,7 @@ def handle_volume_parameters(request_json,task):
     backgroundDBSPL, gainDBSPL, T, R, W, rmsError, modelGuesses = get_model_parameters(inDB,outDBSPL,lCalib,componentGainDBSPL)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished handle_volume_parameters Task, time taken to run function: {elapsed_time} seconds")
+    print(f"============== handle_volume_parameters task, time taken: {elapsed_time}s ==============")
     return 200, {
         str(task): {
             "backgroundDBSPL":backgroundDBSPL,
@@ -212,7 +212,7 @@ def handle_psd_task(request_json,task):
     [y_conv,x_conv] = plt.psd(rec_conv, Fs=sampleRate, NFFT=2048,scale_by_freq=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished psd of recordings Task, time taken to run function: {elapsed_time} seconds")
+    print(f"================ psd_task, time taken: {elapsed_time}s ================")
     return 200, {
         str(task): {
             "x_unconv":x_unconv.tolist(),
@@ -229,7 +229,7 @@ def handle_background_psd_task(request_json,task):
     [y_background, x_background] = plt.psd(background_rec,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished psd of background noise Task, time taken to run function: {elapsed_time} seconds")
+    print(f"================ handle_background_psd task, time taken: {elapsed_time}s ================")
     return 200, {
         str(task): {
             "x_background":x_background.tolist(),
@@ -244,7 +244,7 @@ def handle_mls_psd_task(request_json,task):
     [y_mls, x_mls] = plt.psd(mls,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished psd of mls Task, time taken to run function: {elapsed_time} seconds")
+    print(f"================ handle_mls_psd task, time taken: {elapsed_time}s ================")
     return 200, {
         str(task): {
             "x_mls":x_mls.tolist(),
@@ -264,7 +264,7 @@ def handle_mls_task(request_json,task):
     scaled_mls_transformed = mls_transformed * calibrateSoundBurstDb
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished generate mls Task, time taken to run function: {elapsed_time} seconds")
+    print(f"================ handle_mls task, time taken: {elapsed_time}s ================")
     return 200, {
         str(task):{
             "mls": scaled_mls_transformed.tolist(),
@@ -311,7 +311,7 @@ def handle_subtracted_psd_task(request_json,task):
     #[x_conv,y_conv] = plt.psd(rec_conv, Fs=96000, scale_by_freq=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"Finished psd Task, time taken to run function: {elapsed_time} seconds")
+    print(f"================ handle psd task, time taken: {elapsed_time}s ================")
     return 200, {
         str(task): {
             "x":x.tolist(),
