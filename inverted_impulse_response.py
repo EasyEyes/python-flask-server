@@ -263,8 +263,8 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     #############
     ir_fft = fft(ir_component)
     return_ir = ir_fft[:len(ir_fft)//2]
+    return_ir = 20*np.log10(abs(return_ir))
     return_freq = frequencies[:len(frequencies)//2]
-
     return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), convolution_div_test.tolist()
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, calibrateSoundBurstDb, debug=False):
