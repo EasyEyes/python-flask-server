@@ -188,14 +188,10 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     # #ir = ifft(ir)
     # nfft = len(ir)
     # ir = np.roll(ifft_sym(ir),int(nfft/2))
-    testComponentIRFreqs = [20,1999,2000,4000,4001,20000]
-    testComponentIRGains = [0,0,-20,-20,0,0]
     ir_component = splitter(ir, componentIRFreqs, componentIRGains, sample_rate)
-    ir_test = splitter(ir, testComponentIRFreqs, testComponentIRGains, sample_rate)
     num_samples = len(ir_component)
     frequencies = fftfreq(num_samples,1/sample_rate)
     #have my IR here, subtract the microphone/louadspeaker ir from this?
-    inverse_response_test, _, _ = calculateInverseIR(ir_test,lowHz,highHz,iir_length, sample_rate)
     inverse_response_component, scale, ir_pruned = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sample_rate)
     inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir_component,iir_length,sample_rate)
     # mls = list(mls.values())
@@ -234,11 +230,6 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     print("Max value component convolution: " + str(maximum))
     print("Min value component convolution: " + str(minimum))
 
-    convolution_test = lfilter(inverse_response_test,1,mls)
-    print('length of test convolution: ' + str(len(convolution_test)))
-    trimmed_convolution_test = convolution_test[(len(orig_mls)*(N-1)):]
-    convolution_div_test = trimmed_convolution_test * calibrateSoundBurstDb
-
     ##########old method 
     # mls= np.tile(mls, num_periods)
     # mls_pad = np.pad(mls, (0, iir_length), 'constant')
@@ -265,7 +256,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     return_ir = ir_fft[:len(ir_fft)//2]
     return_ir = 20*np.log10(abs(return_ir))
     return_freq = frequencies[:len(frequencies)//2]
-    return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), convolution_div_test.tolist()
+    return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist()
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, calibrateSoundBurstDb, debug=False):
     impulseResponses= impulse_responses_json
