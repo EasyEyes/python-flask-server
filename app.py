@@ -275,14 +275,24 @@ def handle_subtracted_psd_task(request_json,task):
     start_time = time.time()
     #print(request_json);
     rec = request_json["rec"]
-    # knownGain = request_json["knownGains"]
-    # knownFreq = request_json["knownFrequencies"]
+    knownGain = request_json["knownGains"]
+    knownFreq = request_json["knownFrequencies"]
     sample_rate = request_json["sampleRate"]
 
-    # rec_fft = fft(rec)
-    # num_samples = len(rec)
-    # frequencies = fftfreq(num_samples,1/sample_rate)
-
+    [y, x] = plt.psd(rec,Fs=sample_rate,NFFT=2048,scale_by_freq=False)
+    interp_func = interp1d(knownFreq,knownGain)
+    min_freq = min(knownFreq)
+    max_freq = max(knownFreq)
+    inbounds_indices = np.where((abs(x) >= min_freq) & (abs(x) <= max_freq))
+    outbounds_indices = np.where((abs(x) < min_freq) | (abs(x) > max_freq))
+    inbounds_frequencies = abs(x[inbounds_indices])
+    inbounds_y = y[inbounds_indices]
+    interp_gain = interp_func(inbounds_frequencies)
+    H_mic = 10**(interp_gain/20)
+    result = inbounds_y / np.abs(H_mic)
+    y_subtracted = np.zeros_like(y)
+    y_subtracted[inbounds_indices] = result
+    y_subtracted[outbounds_indices] = y[outbounds_indices]
     #interpolation part
     #1) convert rec_fft to dB
     # rec_fft_db = 20*np.log10(abs(rec_fft))
@@ -306,7 +316,6 @@ def handle_subtracted_psd_task(request_json,task):
     #3) convert rec_fft to linear, invert back to time
     # rec = 10**(final_result/20)
     # rec = ifft(rec)
-    [y, x] = plt.psd(rec,Fs=sample_rate,NFFT=2048,scale_by_freq=False)
     #[x_conv,y_conv] = plt.psd(rec_conv, Fs=96000, scale_by_freq=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
@@ -314,7 +323,7 @@ def handle_subtracted_psd_task(request_json,task):
     return 200, {
         str(task): {
             "x":x.tolist(),
-            "y":y.tolist(),
+            "y":y_subtracted.tolist(),
             }
     }
 
