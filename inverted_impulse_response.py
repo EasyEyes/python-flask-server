@@ -162,48 +162,15 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     ir_fft = fft(ir)
     sample_rate = sampleRate
     
-    #interpolation part
-    #1) convert ir_fft to dB
-    # ir_fft_db = 20*np.log10(abs(ir_fft))
-    #2) interpolate and subtract
-    #interpolate function for componentGains and componentFreqs
-    # interp_func = interp1d(componentIRFreqs,componentIRGains)
-
-    #3) some sorting to make sure gains and frequencies are in sorted order when returned
-    # min_freq = min(componentIRFreqs)
-    # max_freq = max(componentIRFreqs)
-    # inbounds_indices = np.where((abs(frequencies) >= min_freq) & (abs(frequencies) <= max_freq))
-    # outbounds_indices = np.where((abs(frequencies) <= min_freq) & (abs(frequencies) >= max_freq))
-    # inbounds_frequencies = abs(frequencies[inbounds_indices])
-    # inbounds_ir_fft_db = ir_fft_db[inbounds_indices]
-    # interp_gain2 = interp_func(inbounds_frequencies)
-    # result = inbounds_ir_fft_db - interp_gain2
-    # final_result = np.zeros_like(frequencies)
-    # final_result[inbounds_indices] = result
-    # final_result[outbounds_indices] = ir_fft_db[outbounds_indices]
- 
-    #3) convert ir_fft to linear, invert back to time
-    # ir = 10**(final_result/20)
-    # ir_fft = ir
-    # #ir = ifft(ir)
-    # nfft = len(ir)
-    # ir = np.roll(ifft_sym(ir),int(nfft/2))
     ir_component = splitter(ir, componentIRFreqs, componentIRGains, sample_rate)
     num_samples = len(ir_component)
     frequencies = fftfreq(num_samples,1/sample_rate)
     #have my IR here, subtract the microphone/louadspeaker ir from this?
     inverse_response_component, scale, ir_pruned = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sample_rate)
     inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir_component,iir_length,sample_rate)
-    # mls = list(mls.values())
+
     mls = np.array(mls)
     orig_mls = mls
-    ######new method
-    #convolution = np.convolve(inverse_response,mls)
-    #print('length of original convolution: ' + str(len(convolution)))
-    #start_index = (N-1)*len(orig_mls)
-    #print('start index: ' + str(start_index))
-    #end_index = -len(inverse_response)
-    #print('end index: ' + str(end_index))
 
     #########
     N = 1 + math.ceil(len(inverse_response_component)/len(mls))
@@ -213,12 +180,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     print('length of inverse_response: ' + str(len(inverse_response_component)))
     convolution = lfilter(inverse_response_component,1,mls)
     print('length of original convolution: ' + str(len(convolution)))
-    #convolution = np.convolve(inverse_response,mls)
-    #print('length of original convolution: ' + str(len(convolution)))
-    #start_index = (N-1)*len(orig_mls)
-    #print('start index: ' + str(start_index))
-    #end_index = -len(inverse_response)
-    #print('end index: ' + str(end_index))
+
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
     convolution_div = trimmed_convolution * calibrateSoundBurstDb
     print('length of convolution: ' + str(len(trimmed_convolution)))
@@ -230,33 +192,11 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     print("Max value component convolution: " + str(maximum))
     print("Min value component convolution: " + str(minimum))
 
-    ##########old method 
-    # mls= np.tile(mls, num_periods)
-    # mls_pad = np.pad(mls, (0, iir_length), 'constant')
-    # convolution = lfilter(inverse_response,1,mls_pad)
-
-    # print("Max convolution")
-    # maximum = max(convolution)
-    # print(maximum)
-    # minimum = abs(min(convolution))
-    # print("Min convolution")
-    # print(minimum)
-    # print("Root mean squared of convolution")
-    # rms = np.sqrt(np.mean(np.square(convolution)))
-    # print(rms)
-    # divisor = 0
-    # if maximum > minimum:
-    #     divisor = maximum
-    # else:
-    #     divisor = minimum
-
-    # convolution_div = convolution
-    #############
     ir_fft = fft(ir_component)
     return_ir = ir_fft[:len(ir_fft)//2]
     return_ir = 20*np.log10(abs(return_ir))
     return_freq = frequencies[:len(frequencies)//2]
-    return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist()
+    return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist()
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, calibrateSoundBurstDb, debug=False):
     impulseResponses= impulse_responses_json
