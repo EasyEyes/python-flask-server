@@ -156,7 +156,27 @@ def prune_ir(original_ir, irLength):
     ir_pruned = smoothing_win * ir_pruned
     return ir_pruned
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength, debug=False):
+def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3):
+    if _calibrateSoundSmoothOctaves == 0:
+        return spectrum
+    
+    # Compute the ratio r
+    r = 2 ** (_calibrateSoundSmoothOctaves / 2)
+    
+    smoothed_spectrum = np.zeros_like(spectrum)
+    
+    # Loop through the spectrum and apply smoothing
+    for i in range(len(spectrum)):
+        # Compute the window indices for averaging
+        start_idx = int(max(0, i / r))
+        end_idx = int(min(len(spectrum) - 1, i * r))
+        
+        # Average the points within the window
+        smoothed_spectrum[i] = np.mean(spectrum[start_idx:end_idx + 1])
+    
+    return smoothed_spectrum
+
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength, calibrateSoundSmoothOctaves, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -208,8 +228,9 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     angle = angle[:len(angle)//2]
     return_ir = ir_fft[:len(ir_fft)//2]
     return_ir = 20*np.log10(abs(return_ir))
+    return_ir = smooth_spectrum(return_ir, calibrateSoundSmoothOctaves)
     return_freq = frequencies[:len(frequencies)//2]
-    return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.real.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), angle.tolist()
+    return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), angle.tolist()
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, calibrateSoundBurstDb, debug=False):
     impulseResponses= impulse_responses_json
