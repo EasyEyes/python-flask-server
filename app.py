@@ -75,6 +75,10 @@ def handle_component_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'iirLength'"
     if "num_periods" not in request_json:
         return 400, "Request body is missing a 'num_periods'"
+    if "calibrateSoundBurstDb" not in request_json:
+        return 400, "Request body is missing a 'calibrateSoundBurstDb'"
+    if "irLength" not in request_json:
+        return 400, "Request body is missing a 'irLength'"
     start_time = time.time()
     impulseResponsesJson = request_json["payload"]
     iir_length = request_json["iirLength"]
@@ -86,7 +90,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     sampleRate = request_json["sampleRate"]
     num_periods = request_json["num_periods"]
     calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
-    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb)
+    irLength = request_json["irLength"]
+    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== component_inverse_impulse_response task, time taken: {elapsed_time}s ==============")

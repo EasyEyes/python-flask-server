@@ -123,9 +123,19 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
 
     return inverse_ir, scale_value, ir_pruned
 
-def splitter(system_ir, componentIRFreqs, componentIRGains, fs = 96000):
-    H = np.abs(fft(system_ir))
+def splitter(system_ir, componentIRFreqs, componentIRGains, fs = 96000, irLength = 500):
+
+    L = irLength
+    # center original IR and prune it to L samples
     nfft = len(system_ir)
+    H = np.abs(fft(system_ir))
+    ir_new = np.roll(ifft_sym(H),int(nfft/2))
+    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1))/(L+1)))
+    ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)+np.floor(L/2).astype(int)] # centered around -l/2 to L/2
+    ir_pruned = smoothing_win * ir_pruned
+
+    H = np.abs(fft(ir_pruned))
+    nfft = len(ir_pruned)
     num_samples = len(H)
     # linear interpolate component gain within range
     frequencies = fftfreq(num_samples, 1/fs)
@@ -142,11 +152,11 @@ def splitter(system_ir, componentIRFreqs, componentIRGains, fs = 96000):
     H_spkr = np.zeros_like(frequencies)
     H_spkr[inbounds_indices] = result
     H_spkr[outbounds_indices] = H[outbounds_indices]
+    angle = np.angle(H_spkr, deg=True)
     ir_component = np.roll(ifft_sym(H_spkr),int(nfft/2))
-    return ir_component
+    return ir_component, angle
 
-
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -159,15 +169,16 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     else:
         ir = np.array(impulseResponses)
         ir = ir.reshape((ir.shape[1],))
-    ir_fft = fft(ir)
+
     sample_rate = sampleRate
     
-    ir_component = splitter(ir, componentIRFreqs, componentIRGains, sample_rate)
+    ir_component, angle = splitter(ir, componentIRFreqs, componentIRGains, sample_rate, irLength)
     num_samples = len(ir_component)
     frequencies = fftfreq(num_samples,1/sample_rate)
+
     #have my IR here, subtract the microphone/louadspeaker ir from this?
-    inverse_response_component, scale, ir_pruned = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sample_rate)
-    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir_component,iir_length,sample_rate)
+    inverse_response_component, scale, _ = calculateInverseIR(ir_component,lowHz,highHz, iir_length, sample_rate)
+    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir_component, iir_length,sample_rate)
 
     mls = np.array(mls)
     orig_mls = mls
@@ -193,7 +204,6 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     print("Min value component convolution: " + str(minimum))
 
     ir_fft = fft(ir_component)
-    angle = np.angle(ir_fft, deg=True)
     angle = angle[:len(angle)//2]
     return_ir = ir_fft[:len(ir_fft)//2]
     return_ir = 20*np.log10(abs(return_ir))
