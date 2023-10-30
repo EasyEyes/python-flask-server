@@ -173,8 +173,6 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     sample_rate = sampleRate
     
     ir_component, angle = splitter(ir, componentIRFreqs, componentIRGains, sample_rate)
-    num_samples = len(ir_component)
-    frequencies = fftfreq(num_samples,1/sample_rate)
 
     #have my IR here, subtract the microphone/louadspeaker ir from this?
     inverse_response_component, scale, _ = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sample_rate)
@@ -204,6 +202,8 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     print("Min value component convolution: " + str(minimum))
 
     ir_pruned = prune_ir(ir_component, irLength)
+    num_samples = len(ir_pruned)
+    frequencies = fftfreq(num_samples,1/sample_rate)
     ir_fft = fft(ir_pruned)
     angle = angle[:len(angle)//2]
     return_ir = ir_fft[:len(ir_fft)//2]
