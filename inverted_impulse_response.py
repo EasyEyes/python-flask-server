@@ -190,7 +190,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
     sample_rate = sampleRate
     
-    componentIRDeg = np.zeros(componentIRFreqs)
+    componentIRDeg = np.zeros_like(componentIRFreqs)
     ir_component, angle = splitter(ir, componentIRFreqs, componentIRGains, componentIRDeg, sample_rate)
 
     #have my IR here, subtract the microphone/louadspeaker ir from this?
