@@ -129,7 +129,7 @@ def splitter(system_ir,partIRHz,partIRDb,partIRDeg,fs=48000):
   systemDeg = np.angle(systemSpectrum,deg=True) # radians → deg
   num_samples = len(systemGain)
   frequenciesHz = fftfreq(num_samples,1/fs)
-  print("frequencies increasing", np.all(np.diff(frequenciesHz) > 0))
+  print("frequencies increasing", np.all(np.diff(partIRHz) > 0))
   # linearly interpolate gain and phase
   partDb=np.interp(frequenciesHz,partIRHz,partIRDb)
   partDeg=np.interp(frequenciesHz,partIRHz,partIRDeg)
