@@ -123,28 +123,26 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
 
     return inverse_ir, scale_value, ir_pruned
 
-def splitter(system_ir, componentIRFreqs, componentIRGains, fs = 96000):
-    H = np.abs(fft(system_ir))
-    nfft = len(system_ir)
-    num_samples = len(H)
-    # linear interpolate component gain within range
-    frequencies = fftfreq(num_samples, 1/fs)
-    interp_func = interp1d(componentIRFreqs,componentIRGains)
-    min_freq = min(componentIRFreqs)
-    max_freq = max(componentIRFreqs)
-    inbounds_indices = np.where((abs(frequencies) >= min_freq) & (abs(frequencies) <= max_freq))
-    outbounds_indices = np.where((abs(frequencies) < min_freq) | (abs(frequencies) > max_freq))
-    inbounds_frequencies = abs(frequencies[inbounds_indices])
-    inbounds_H = H[inbounds_indices]
-    interp_gain = interp_func(inbounds_frequencies)
-    H_component = 10**(interp_gain/20)
-    result = inbounds_H / np.abs(H_component)
-    H_spkr = np.zeros_like(frequencies)
-    H_spkr[inbounds_indices] = result
-    H_spkr[outbounds_indices] = H[outbounds_indices]
-    angle = np.angle(H_spkr, deg=True)
-    ir_component = np.roll(ifft_sym(H_spkr),int(nfft/2))
-    return ir_component, angle
+def splitter(system_ir,partIRHz,partIRDb,partIRDeg,fs=48000):
+  systemSpectrum = fft(system_ir)
+  systemGain = np.abs(systemSpectrum)
+  systemDeg = np.angle(systemSpectrum,deg=True) # radians → deg
+  num_samples = len(systemGain)
+  frequenciesHz = fftfreq(num_samples,1/fs)
+  # linearly interpolate gain and phase
+  partDb=np.interp1(frequenciesHz,partIRHz,partIRDb)
+  partDeg=np.interp1(frequenciesHz,partIRHz,partIRDeg)
+  otherGain=systemGain/10**(partDb/20)
+  otherDeg=systemDeg-partDeg
+  otherSpectrum = otherGain*np.exp(1j*np.deg2rad(otherDeg))
+  if False:
+    # I think this is all we need.
+    other_ir = ifft(otherSpectrum)
+  else:
+    # Simon also rolls the spectrum by half its length.
+    n=int(len(system_ir)/2)
+    other_ir=np.roll(ifft_sym(otherSpectrum),n)
+  return other_ir, otherDeg
 
 def prune_ir(original_ir, irLength):
     L = irLength
@@ -192,7 +190,8 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
     sample_rate = sampleRate
     
-    ir_component, angle = splitter(ir, componentIRFreqs, componentIRGains, sample_rate)
+    componentIRDeg = np.zeros(componentIRFreqs)
+    ir_component, angle = splitter(ir, componentIRFreqs, componentIRGains, componentIRDeg, sample_rate)
 
     #have my IR here, subtract the microphone/louadspeaker ir from this?
     inverse_response_component, scale, _ = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sample_rate)
