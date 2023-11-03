@@ -227,8 +227,11 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     ir_fft = fft(ir_pruned)
     angle = angle[:len(angle)//2]
     return_ir = ir_fft[:len(ir_fft)//2]
+    ## DELETE: return_ir = 20*np.log10(abs(return_ir))
+    power = abs(return_ir)**2
+    power = smooth_spectrum(power, calibrateSoundSmoothOctaves)
+    return_ir = np.sqrt(power)
     return_ir = 20*np.log10(abs(return_ir))
-    return_ir = smooth_spectrum(return_ir, calibrateSoundSmoothOctaves)
     return_freq = frequencies[:len(frequencies)//2]
     return inverse_response_component.tolist(), convolution_div.tolist(), return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), angle.tolist()
 
