@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 from impulse_response import run_ir_task, recover_signal, g_filter
-from inverted_impulse_response import run_iir_task
+# from inverted_impulse_response import run_iir_task
 from scipy.signal import convolve
 from scipy.fft import fft, rfft
 from scipy.io import wavfile
@@ -98,57 +98,57 @@ def readCSVData_(pathToFile):
     df.dropna(inplace=True)
     return df.to_numpy()[:, 0]
 
-def test_run():
-    num_captured = 5
-    impulse_responses = []
+# def test_run():
+#     num_captured = 5
+#     impulse_responses = []
     
-    mls = readCSVData('/Users/hugo/Desktop/dev/easyeyes/python-flask-server/data/MLS.csv');
-    #plot_frequency_spectrum(mls, 'MLS', True)
+#     mls = readCSVData('/Users/hugo/Desktop/dev/easyeyes/python-flask-server/data/MLS.csv');
+#     #plot_frequency_spectrum(mls, 'MLS', True)
     
-    sig = None
-    for i in range(num_captured):
-        sig = readCSVData(f'/Users/hugo/Desktop/SC-Captures/07-17-22-96000-5/recordedMLSignal_{i}.csv')
-        #plot_recorded_signal(sig)
+#     sig = None
+#     for i in range(num_captured):
+#         sig = readCSVData(f'/Users/hugo/Desktop/SC-Captures/07-17-22-96000-5/recordedMLSignal_{i}.csv')
+#         #plot_recorded_signal(sig)
         
-        ir = run_ir_task(sig, debug=True)
-        #plot_frequency_spectrum(ir, 'Impulse Reponse')
-        impulse_responses.append(ir)
-        #plot_recorded_signal(impulse_responses[i])
+#         ir = run_ir_task(sig, debug=True)
+#         #plot_frequency_spectrum(ir, 'Impulse Reponse')
+#         impulse_responses.append(ir)
+#         #plot_recorded_signal(impulse_responses[i])
         
-    plot_frequency_spectrum(sig, 'Recorded MLS', True, [2.005, 2.01])
+#     plot_frequency_spectrum(sig, 'Recorded MLS', True, [2.005, 2.01])
 
-    smallest = np.Inf
-    for ir in impulse_responses:
-        if len(ir) < smallest:
-            smallest = len(ir)
+#     smallest = np.Inf
+#     for ir in impulse_responses:
+#         if len(ir) < smallest:
+#             smallest = len(ir)
     
-    for i, ir in enumerate(impulse_responses):
-        impulse_responses[i] = ir[0:smallest]
+#     for i, ir in enumerate(impulse_responses):
+#         impulse_responses[i] = ir[0:smallest]
     
-    ir = np.mean(impulse_responses, axis=0)
-    plot_frequency_spectrum(ir, 'Impulse Response', True, [-0.025, 0.05])
-    saveBufferToCSV(ir.real, '/Users/hugo/Desktop/ir_py.csv')
+#     ir = np.mean(impulse_responses, axis=0)
+#     plot_frequency_spectrum(ir, 'Impulse Response', True, [-0.025, 0.05])
+#     saveBufferToCSV(ir.real, '/Users/hugo/Desktop/ir_py.csv')
     
-    g = run_iir_task(impulse_responses, debug=True)
-    g = np.array(g)
-    plot_frequency_spectrum(g, 'Inverted Impulse Response', True, [-0.000025, 0.0005])
-    # plot_recorded_signal(g)
+#     g = run_iir_task(impulse_responses, debug=True)
+#     g = np.array(g)
+#     plot_frequency_spectrum(g, 'Inverted Impulse Response', True, [-0.000025, 0.0005])
+#     # plot_recorded_signal(g)
     
-    saveBufferToCSV(2.*(g - np.min(g))/np.ptp(g)-1, '/Users/hugo/Desktop/iir_py.csv')
+#     saveBufferToCSV(2.*(g - np.min(g))/np.ptp(g)-1, '/Users/hugo/Desktop/iir_py.csv')
     
-    # convolved = convolve(g, sig)
-    # plot_recorded_signal(convolved)
+#     # convolved = convolve(g, sig)
+#     # plot_recorded_signal(convolved)
     
-    # corrected = convolve(convolved, impulse_responses[len(impulse_responses)-1])
+#     # corrected = convolve(convolved, impulse_responses[len(impulse_responses)-1])
     
-    # plot_recorded_signal(corrected)
+#     # plot_recorded_signal(corrected)
 
     
-    # for sig in recordedSignals:
-    #     plot_recorded_signal(convolve(sig, g))
+#     # for sig in recordedSignals:
+#     #     plot_recorded_signal(convolve(sig, g))
     
-    recovered = recover_signal(s=mls, g=g, h=ir)
-    plot_frequency_spectrum(recovered, 'Recovered MLS')
+#     recovered = recover_signal(s=mls, g=g, h=ir)
+#     plot_frequency_spectrum(recovered, 'Recovered MLS')
 
 def convolve_wav():
     sampleRate, rawData = wavfile.read("/Users/hugo/Desktop/dev/easyeyes/speaker-calibration/dist/example/Queen-Bohemian_Rhapsody.wav")
@@ -171,6 +171,34 @@ def convolve_wav():
     
     #plot_frequency_spectrum(waveFile_left_g_filtered, 'g Filtered WAV File')
     #plot_frequency_spectrum(recovered, 'Recovered WAV File')
+
+def volumeCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundBurstSec):
+    coarseHz = 1 / _calibrateSoundPowerBinDesiredSec 
+    power = np.square(np.array(rec))
+    # Adjust coarseHz so that fs is an integer
+    # multiple of coarseHz.
+    n = int(round(fs / coarseHz))
+    coarseHz = int(fs / n)
+    # Sampling times for plotting
+    t = np.arange(len(power)) / fs
+    coarseSamples = int(np.ceil(len(power) / n))
+    coarsePowerDb = np.zeros(coarseSamples)
+    coarseT = np.zeros(coarseSamples)
+    for i in range(coarseSamples):
+      indices = range(i * n, min((i + 1) * n, len(power)))
+      extremeIndices = [indices[0],indices[-1]]
+      coarsePowerDb[i] = 10 * np.log10(np.mean(power[indices]))
+      coarseT[i] = np.mean(t[extremeIndices])
+  # EasyEyes analysis skips the first burst, so we
+  # merely plot it (dashed), and don't include it
+  # in the SD calculation.
+  # We compute SD over the points that we use,
+  # ignoring the prep.
+    prepSamples=round(coarseHz * _calibrateSoundBurstSec)
+    sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),2)
+    coarseT = np.round(coarseT, 1)
+    coarsePowerDb = np.round(coarsePowerDb,1)
+    return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples:].tolist(),coarsePowerDb[prepSamples:].tolist(), sdDb
 
 if __name__ == '__main__':
     #test_run()

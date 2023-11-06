@@ -14,9 +14,8 @@ from inverted_impulse_response import run_component_iir_task, run_system_iir_tas
 from volume import run_volume_task,run_volume_task_nonlinear
 from volume import get_model_parameters
 import numpy as np
-from scipy.fft import fft, ifft, irfft, fftfreq
-from scipy.interpolate import interp1d
 from scipy.signal import max_len_seq
+from utils import volumeCheck
 import math
 
 app = Flask(__name__)
@@ -44,11 +43,6 @@ def handle_impulse_response_task(request_json, task):
     P = request_json["P"]
     NUM_PERIODS = request_json["numPeriods"]
     NUM_PERIODS = int(NUM_PERIODS)
-    power = np.square(np.array(recordedSignalsJson))
-    N = int(sampleRate*0.2)
-    smoothPower =  np.convolve(power, np.ones(N)/N, mode='valid')
-    sd = np.std(10*np.log10(smoothPower))
-    print(f'sd ={sd: .3f}' )
     print("Starting IR Task")
     ir, autocorrelation = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
     end_time = time.time()
@@ -57,8 +51,24 @@ def handle_impulse_response_task(request_json, task):
     return 200, {
         str(task): {
             'ir':ir,
-            'autocorrelation': autocorrelation,
-            'sd':sd
+            'autocorrelation': autocorrelation
+        }
+    }
+
+
+def handle_volume_check_task(request_json, task):
+    recordedSignalsJson = request_json["payload"]
+    sampleRate = request_json["sampleRate"]
+    binDesiredSec = request_json["binDesiredSec"]
+    burstSec = request_json["burstSec"]
+    warmupT, warmupDb, recT, recDb, sd = volumeCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec)
+    return 200, {
+        str(task): {
+            'sd':sd,
+            'warmupT': warmupT, 
+            'warmupDb': warmupDb, 
+            'recT': recT, 
+            'recDb': recDb
         }
     }
 
@@ -101,7 +111,7 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     irLength = request_json["irLength"]
     calibrateSoundSmoothOctaves = request_json["calibrateSoundSmoothOctaves"]
     
-    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength, calibrateSoundSmoothOctaves)
+    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength, calibrateSoundSmoothOctaves)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== component_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
@@ -113,7 +123,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
                         "frequencies":frequencies,
                         "iirNoBandpass":iir_no_bandpass,
                         "irTime": ir_time,
-                        "angle": angle
+                        "angle": angle,
+                        "irOrigin": ir_origin
                     }
     }
 
@@ -311,6 +322,7 @@ def handle_subtracted_psd_task(request_json,task):
 
 SUPPORTED_TASKS = {
     'impulse-response': handle_impulse_response_task,
+    'volume-check': handle_volume_check_task,
     'component-inverse-impulse-response': handle_component_inverse_impulse_response_task,
     'system-inverse-impulse-response': handle_system_inverse_impulse_response_task,
     'volume': handle_volume_task_nonlinear,
