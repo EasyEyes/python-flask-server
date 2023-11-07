@@ -195,7 +195,7 @@ def volumeCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundBurst
   # We compute SD over the points that we use,
   # ignoring the prep.
     prepSamples=round(coarseHz * _calibrateSoundBurstSec)
-    sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),2)
+    sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
     coarseT = np.round(coarseT, 1)
     coarsePowerDb = np.round(coarsePowerDb,1)
     return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples:].tolist(),coarsePowerDb[prepSamples:].tolist(), sdDb
