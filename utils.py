@@ -172,7 +172,7 @@ def convolve_wav():
     #plot_frequency_spectrum(waveFile_left_g_filtered, 'g Filtered WAV File')
     #plot_frequency_spectrum(recovered, 'Recovered WAV File')
 
-def volumeCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundBurstSec):
+def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundBurstSec):
     coarseHz = 1 / _calibrateSoundPowerBinDesiredSec 
     power = np.square(np.array(rec))
     # Adjust coarseHz so that fs is an integer
@@ -199,6 +199,35 @@ def volumeCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundBurst
     coarseT = np.round(coarseT, 1)
     coarsePowerDb = np.round(coarsePowerDb,1)
     return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples:].tolist(),coarsePowerDb[prepSamples:].tolist(), sdDb
+
+def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
+    coarseHz = 1 / _calibrateSoundPowerBinDesiredSec 
+    power = np.square(np.array(rec))
+    # Adjust coarseHz so that fs is an integer
+    # multiple of coarseHz.
+    n = int(round(fs / coarseHz))
+    coarseHz = int(fs / n)
+    # Sampling times for plotting
+    t = np.arange(len(power)) / fs
+    coarseSamples = int(np.ceil(len(power) / n))
+    coarsePowerDb = np.zeros(coarseSamples)
+    coarseT = np.zeros(coarseSamples)
+    for i in range(coarseSamples):
+      indices = range(i * n, min((i + 1) * n, len(power)))
+      extremeIndices = [indices[0],indices[-1]]
+      coarsePowerDb[i] = 10 * np.log10(np.mean(power[indices]))
+      coarseT[i] = np.mean(t[extremeIndices])
+  # EasyEyes analysis skips the first burst, so we
+  # merely plot it (dashed), and don't include it
+  # in the SD calculation.
+  # We compute SD over the points that we use,
+  # ignoring the prep.
+    prepSamples=round(coarseHz * preSec)
+    postSamples=round(coarseHz * (preSec + Sec))
+    sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
+    coarseT = np.round(coarseT, 1)
+    coarsePowerDb = np.round(coarsePowerDb,1)
+    return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples:postSamples].tolist(), coarsePowerDb[prepSamples:postSamples].tolist(), coarseT[postSamples:].tolist(),coarsePowerDb[postSamples:].tolist(), sdDb
 
 if __name__ == '__main__':
     #test_run()

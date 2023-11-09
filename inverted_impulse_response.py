@@ -146,7 +146,7 @@ def prune_ir(original_ir, irLength):
     H = np.abs(fft(original_ir))
     ir_new = np.roll(ifft_sym(H),int(nfft/2))
     smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1))/(L+1)))
-    ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)+np.floor(L/2).astype(int)] # centered around -l/2 to L/2
+    ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int) + L] # centered around -l/2 to L/2
     ir_pruned = smoothing_win * ir_pruned
     return ir_pruned
 

@@ -15,7 +15,7 @@ from volume import run_volume_task,run_volume_task_nonlinear
 from volume import get_model_parameters
 import numpy as np
 from scipy.signal import max_len_seq
-from utils import volumeCheck
+from utils import allHzPowerCheck, volumePowerCheck
 import math
 
 app = Flask(__name__)
@@ -56,12 +56,12 @@ def handle_impulse_response_task(request_json, task):
     }
 
 
-def handle_volume_check_task(request_json, task):
+def handle_all_hz_power_check_task(request_json, task):
     recordedSignalsJson = request_json["payload"]
     sampleRate = request_json["sampleRate"]
     binDesiredSec = request_json["binDesiredSec"]
     burstSec = request_json["burstSec"]
-    warmupT, warmupDb, recT, recDb, sd = volumeCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec)
+    warmupT, warmupDb, recT, recDb, sd = allHzPowerCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec)
     return 200, {
         str(task): {
             'sd':sd,
@@ -69,6 +69,25 @@ def handle_volume_check_task(request_json, task):
             'warmupDb': warmupDb, 
             'recT': recT, 
             'recDb': recDb
+        }
+    }
+
+def handle_volume_power_check_task(request_json, task):
+    recordedSignalsJson = request_json["payload"]
+    sampleRate = request_json["sampleRate"]
+    preSec = request_json["preSec"]
+    Sec = request_json["Sec"]
+    binDesiredSec = request_json["binDesiredSec"]
+    preT, preDb, recT, recDb, postT, postDb, sd = volumePowerCheck(recordedSignalsJson, sampleRate, preSec, Sec, binDesiredSec)
+    return 200, {
+        str(task): {
+            'sd':sd,
+            'preT': preT, 
+            'preDb': preDb, 
+            'recT': recT, 
+            'recDb': recDb,
+            'postT': postT,
+            'postDb': postDb
         }
     }
 
@@ -322,7 +341,8 @@ def handle_subtracted_psd_task(request_json,task):
 
 SUPPORTED_TASKS = {
     'impulse-response': handle_impulse_response_task,
-    'volume-check': handle_volume_check_task,
+    'all-hz-check': handle_all_hz_power_check_task,
+    'volume-check': handle_volume_power_check_task,
     'component-inverse-impulse-response': handle_component_inverse_impulse_response_task,
     'system-inverse-impulse-response': handle_system_inverse_impulse_response_task,
     'volume': handle_volume_task_nonlinear,
