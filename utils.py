@@ -198,7 +198,7 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
     coarseT = np.round(coarseT, 1)
     coarsePowerDb = np.round(coarsePowerDb,1)
-    return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples:].tolist(),coarsePowerDb[prepSamples:].tolist(), sdDb
+    return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples-1:].tolist(),coarsePowerDb[prepSamples-1:].tolist(), sdDb
 
 def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
     coarseHz = 1 / _calibrateSoundPowerBinDesiredSec 
@@ -227,7 +227,7 @@ def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
     coarseT = np.round(coarseT, 1)
     coarsePowerDb = np.round(coarsePowerDb,1)
-    return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples:postSamples].tolist(), coarsePowerDb[prepSamples:postSamples].tolist(), coarseT[postSamples:].tolist(),coarsePowerDb[postSamples:].tolist(), sdDb
+    return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples-1:postSamples].tolist(), coarsePowerDb[prepSamples-1:postSamples].tolist(), coarseT[postSamples-1:].tolist(),coarsePowerDb[postSamples-1:].tolist(), sdDb
 
 if __name__ == '__main__':
     #test_run()
