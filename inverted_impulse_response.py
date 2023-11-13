@@ -135,10 +135,13 @@ def splitter(system_ir,partIRHz,partIRDb,partIRDeg,fs=48000):
   partDeg=np.interp(frequenciesHz,partIRHz,partIRDeg)
   otherGain=systemGain/10**(partDb/20)
   otherDeg=systemDeg-partDeg
+
   otherSpectrum = otherGain*np.exp(1j*np.deg2rad(otherDeg))
   n=int(len(system_ir)/2)
   other_ir=np.roll(ifft_sym(otherSpectrum),n)
-  return other_ir, otherDeg
+  systemDeg = systemDeg[:num_samples//2]
+  otherDeg = otherDeg[:num_samples//2]
+  return other_ir, otherDeg, systemDeg
 
 def prune_ir(original_ir, irLength):
     L = irLength
@@ -187,7 +190,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     sample_rate = sampleRate
     
     componentIRDeg = np.zeros_like(componentIRFreqs)
-    ir_component, angle = splitter(ir, componentIRFreqs, componentIRGains, componentIRDeg, sample_rate)
+    ir_component, angle, system_angle = splitter(ir, componentIRFreqs, componentIRGains, componentIRDeg, sample_rate)
 
     #have my IR here, subtract the microphone/louadspeaker ir from this?
     inverse_response_component, scale, _ = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sample_rate)
@@ -220,7 +223,10 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     num_samples = len(ir_pruned)
     frequencies = fftfreq(num_samples,1/sample_rate)
     ir_fft = fft(ir_pruned)
-    angle = angle[:len(angle)//2]
+    component_angle = np.angle(ir_fft,deg=True)
+    component_angle = component_angle[:num_samples//2]
+    #angle = angle[:len(angle)//2]
+    #system_angle = system_angle[:len(system_angle)//2]
     return_ir = ir_fft[:len(ir_fft)//2]
     ## DELETE: return_ir = 20*np.log10(abs(return_ir))
     power = abs(return_ir)**2
@@ -229,7 +235,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     smoothed_return_ir = 20*np.log10(abs(smoothed_return_ir))
     return_ir = 20*np.log10(abs(return_ir))
     return_freq = frequencies[:len(frequencies)//2]
-    return inverse_response_component.tolist(), convolution_div.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), angle.tolist(), return_ir.tolist()
+    return inverse_response_component.tolist(), convolution_div.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist()
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, calibrateSoundBurstDb, debug=False):
     impulseResponses= impulse_responses_json

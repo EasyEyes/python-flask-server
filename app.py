@@ -130,7 +130,7 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     irLength = request_json["irLength"]
     calibrateSoundSmoothOctaves = request_json["calibrateSoundSmoothOctaves"]
     
-    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength, calibrateSoundSmoothOctaves)
+    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength, calibrateSoundSmoothOctaves)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== component_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
@@ -142,7 +142,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
                         "frequencies":frequencies,
                         "iirNoBandpass":iir_no_bandpass,
                         "irTime": ir_time,
-                        "angle": angle,
+                        "component_angle": angle,
+                        "system_angle":system_angle,
                         "irOrigin": ir_origin
                     }
     }
