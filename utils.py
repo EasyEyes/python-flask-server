@@ -194,10 +194,16 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
     coarseT = np.round(coarseT, 1).tolist()
     coarsePowerDb = np.round(coarsePowerDb,1).tolist()
     start = np.interp(_calibrateSoundBurstSec,coarseT,coarsePowerDb)
-    warmupT = coarseT[:prepSamples] + [_calibrateSoundBurstSec]
-    recT = [_calibrateSoundBurstSec] + coarseT[prepSamples:]
-    warmupDb = [coarsePowerDb] + coarsePowerDb[:prepSamples]
-    recDb = [start] + coarsePowerDb[prepSamples:]
+    warmupT = coarseT[:prepSamples]
+    warmupDb = coarsePowerDb[:prepSamples]
+    if warmupT[-1] < _calibrateSoundBurstSec:
+        warmupT = warmupT + [_calibrateSoundBurstSec]
+        warmupDb = warmupDb + [start]
+    recT = coarseT[prepSamples:]
+    recDb = coarsePowerDb[prepSamples:]
+    if recT[0] > _calibrateSoundBurstSec:
+        recT = [_calibrateSoundBurstSec] + coarseT[prepSamples:]
+        recDb = [start] + coarsePowerDb[prepSamples:]
     return warmupT, warmupDb, recT, recDb, sdDb
 
 def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
@@ -225,12 +231,24 @@ def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
     coarsePowerDb = np.round(coarsePowerDb,1).tolist()
     start = np.interp(preSec,coarseT,coarsePowerDb)
     end = np.interp((preSec + Sec),coarseT,coarsePowerDb)
-    preT = coarseT[:prepSamples] + [preSec]
-    recT = [preSec] + coarseT[prepSamples:postSamples] + [(preSec + Sec)]
-    postT = [(preSec + Sec)] + coarseT[postSamples:]
-    preDb = coarsePowerDb[:prepSamples] + [start]
-    recDb = [start] + coarsePowerDb[prepSamples:postSamples] + [end]
-    postDb = [end] + coarsePowerDb[postSamples:]
+    preT = coarseT[:prepSamples]
+    preDb = coarsePowerDb[:prepSamples]
+    if preT[-1] < preSec:
+        preT = coarseT[:prepSamples] + [preSec]
+        preDb = coarsePowerDb[:prepSamples] + [start]
+    recT = coarseT[prepSamples:postSamples]
+    recDb = coarsePowerDb[prepSamples:postSamples]
+    if recT[0] > preSec:
+        recT = [preSec] + coarseT[prepSamples:postSamples]
+        recDb = [start] + coarsePowerDb[prepSamples:postSamples]
+    if rec[-1] < (preSec + Sec):
+        recT = coarseT[prepSamples:postSamples] + [(preSec + Sec)]
+        recDb = coarsePowerDb[prepSamples:postSamples] + [end]
+    postT = coarseT[postSamples:]
+    postDb = coarsePowerDb[postSamples:]
+    if postT[0] > (preSec + Sec):
+        postT = [(preSec + Sec)] + coarseT[postSamples:]
+        postDb = [end] + coarsePowerDb[postSamples:]
     return preT, preDb, recT, recDb, postT, postDb, sdDb
 
 if __name__ == '__main__':
