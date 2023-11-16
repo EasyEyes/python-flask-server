@@ -189,16 +189,16 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
       extremeIndices = [indices[0],indices[-1]]
       coarsePowerDb[i] = 10 * np.log10(np.mean(power[indices]))
       coarseT[i] = np.mean(t[extremeIndices])
-  # EasyEyes analysis skips the first burst, so we
-  # merely plot it (dashed), and don't include it
-  # in the SD calculation.
-  # We compute SD over the points that we use,
-  # ignoring the prep.
     prepSamples=round(coarseHz * _calibrateSoundBurstSec)
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
-    coarseT = np.round(coarseT, 1)
-    coarsePowerDb = np.round(coarsePowerDb,1)
-    return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples-1:].tolist(),coarsePowerDb[prepSamples-1:].tolist(), sdDb
+    coarseT = np.round(coarseT, 1).tolist()
+    coarsePowerDb = np.round(coarsePowerDb,1).tolist()
+    start = np.interp(_calibrateSoundBurstSec,coarseT,coarsePowerDb)
+    warmupT = coarseT[:prepSamples] + [_calibrateSoundBurstSec]
+    recT = [_calibrateSoundBurstSec] + coarseT[prepSamples:]
+    warmupDb = [coarsePowerDb] + coarsePowerDb[:prepSamples]
+    recDb = [start] + coarsePowerDb[prepSamples:]
+    return warmupT, warmupDb, recT, recDb, sdDb
 
 def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
     coarseHz = 1 / _calibrateSoundPowerBinDesiredSec 
@@ -217,17 +217,21 @@ def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
       extremeIndices = [indices[0],indices[-1]]
       coarsePowerDb[i] = 10 * np.log10(np.mean(power[indices]))
       coarseT[i] = np.mean(t[extremeIndices])
-  # EasyEyes analysis skips the first burst, so we
-  # merely plot it (dashed), and don't include it
-  # in the SD calculation.
-  # We compute SD over the points that we use,
-  # ignoring the prep.
+    
     prepSamples=round(coarseHz * preSec)
     postSamples=round(coarseHz * (preSec + Sec))
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
-    coarseT = np.round(coarseT, 1)
-    coarsePowerDb = np.round(coarsePowerDb,1)
-    return coarseT[:prepSamples].tolist(), coarsePowerDb[:prepSamples].tolist(), coarseT[prepSamples-1:postSamples].tolist(), coarsePowerDb[prepSamples-1:postSamples].tolist(), coarseT[postSamples-1:].tolist(),coarsePowerDb[postSamples-1:].tolist(), sdDb
+    coarseT = np.round(coarseT, 1).tolist()
+    coarsePowerDb = np.round(coarsePowerDb,1).tolist()
+    start = np.interp(preSec,coarseT,coarsePowerDb)
+    end = np.interp((preSec + Sec),coarseT,coarsePowerDb)
+    preT = coarseT[:prepSamples] + [preSec]
+    recT = [preSec] + coarseT[prepSamples:postSamples] + [(preSec + Sec)]
+    postT = [(preSec + Sec)] + coarseT[postSamples:]
+    preDb = coarsePowerDb[:prepSamples] + [start]
+    recDb = [start] + coarsePowerDb[prepSamples:postSamples] + [end]
+    postDb = [end] + coarsePowerDb[postSamples:]
+    return preT, preDb, recT, recDb, postT, postDb, sdDb
 
 if __name__ == '__main__':
     #test_run()
