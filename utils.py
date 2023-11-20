@@ -204,7 +204,7 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
     if recT[0] > _calibrateSoundBurstSec:
         recT = [_calibrateSoundBurstSec] + coarseT[prepSamples:]
         recDb = [start] + coarsePowerDb[prepSamples:]
-    return warmupT, warmupDb, recT, recDb, sdDb
+    return warmupT, warmupDb, recT, recDb, sdDb, coarseT, coarsePowerDb
 
 def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
     coarseHz = 1 / _calibrateSoundPowerBinDesiredSec 
@@ -249,7 +249,7 @@ def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
     if postT[0] > (preSec + Sec):
         postT = [(preSec + Sec)] + coarseT[postSamples:]
         postDb = [end] + coarsePowerDb[postSamples:]
-    return preT, preDb, recT, recDb, postT, postDb, sdDb
+    return preT, preDb, recT, recDb, postT, postDb, sdDb, coarseT, coarsePowerDb
 
 if __name__ == '__main__':
     #test_run()
