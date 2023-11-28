@@ -198,8 +198,8 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
       coarseT[i] = np.mean(t[extremeIndices])
     prepSamples=round(coarseHz * _calibrateSoundBurstSec)
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
-    coarseT = np.round(coarseT, 1).tolist()
-    coarsePowerDb = np.round(coarsePowerDb,1).tolist()
+    coarseT = np.round(coarseT, 3).tolist()
+    coarsePowerDb = np.round(coarsePowerDb,3).tolist()
     start = np.interp(_calibrateSoundBurstSec,coarseT,coarsePowerDb)
     warmupT = coarseT[:prepSamples]
     warmupDb = coarsePowerDb[:prepSamples]
@@ -235,8 +235,8 @@ def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
     prepSamples=round(coarseHz * preSec)
     postSamples=round(coarseHz * (preSec + Sec))
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
-    coarseT = np.round(coarseT, 1).tolist()
-    coarsePowerDb = np.round(coarsePowerDb,1).tolist()
+    coarseT = np.round(coarseT, 3).tolist()
+    coarsePowerDb = np.round(coarsePowerDb,3).tolist()
     start = np.interp(preSec,coarseT,coarsePowerDb)
     end = np.interp((preSec + Sec),coarseT,coarsePowerDb)
     preT = coarseT[:prepSamples]
