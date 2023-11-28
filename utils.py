@@ -178,7 +178,7 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
     print("fs", fs)
     print("_calibrateSoundPowerBinDesiredSec", _calibrateSoundPowerBinDesiredSec)
     print("_calibrateSoundBurstSec", _calibrateSoundBurstSec)
-    print("length of rec", rec)
+    print("length of rec", len(rec))
     power = np.square(np.array(rec))
     # Adjust coarseHz so that fs is an integer
     # multiple of coarseHz.
