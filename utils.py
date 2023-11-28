@@ -174,11 +174,18 @@ def convolve_wav():
 
 def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundBurstSec):
     coarseHz = 1 / _calibrateSoundPowerBinDesiredSec 
+    print("coarseHz",coarseHz)
+    print("fs", fs)
+    print("_calibrateSoundPowerBinDesiredSec", _calibrateSoundPowerBinDesiredSec)
+    print("_calibrateSoundBurstSec", _calibrateSoundBurstSec)
+    print("length of rec", rec)
     power = np.square(np.array(rec))
     # Adjust coarseHz so that fs is an integer
     # multiple of coarseHz.
     n = int(round(fs / coarseHz))
     coarseHz = int(fs / n)
+    print("number of bin",n)
+    print("bin size", coarseHz)
     # Sampling times for plotting
     t = np.arange(len(power)) / fs
     coarseSamples = int(np.ceil(len(power) / n))
