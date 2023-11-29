@@ -61,7 +61,8 @@ def handle_all_hz_power_check_task(request_json, task):
     sampleRate = request_json["sampleRate"]
     binDesiredSec = request_json["binDesiredSec"]
     burstSec = request_json["burstSec"]
-    warmupT, warmupDb, recT, recDb, sd,coarseT,coarsePowerDb  = allHzPowerCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec)
+    repeats = request_json["repeats"]
+    warmupT, warmupDb, recT, recDb, sd, postT, postDb  = allHzPowerCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec,repeats)
     return 200, {
         str(task): {
             'sd':sd,
@@ -69,8 +70,8 @@ def handle_all_hz_power_check_task(request_json, task):
             'warmupDb': warmupDb, 
             'recT': recT, 
             'recDb': recDb,
-            'coarseT': coarseT,
-            'coarsePowerDb': coarsePowerDb
+            'postT': postT,
+            'postDb': postDb
         }
     }
 
@@ -80,7 +81,7 @@ def handle_volume_power_check_task(request_json, task):
     preSec = request_json["preSec"]
     Sec = request_json["Sec"]
     binDesiredSec = request_json["binDesiredSec"]
-    preT, preDb, recT, recDb, postT, postDb, sd,coarseT,coarsePowerDb = volumePowerCheck(recordedSignalsJson, sampleRate, preSec, Sec, binDesiredSec)
+    preT, preDb, recT, recDb, postT, postDb, sd = volumePowerCheck(recordedSignalsJson, sampleRate, preSec, Sec, binDesiredSec)
     return 200, {
         str(task): {
             'sd':sd,
@@ -89,9 +90,7 @@ def handle_volume_power_check_task(request_json, task):
             'recT': recT, 
             'recDb': recDb,
             'postT': postT,
-            'postDb': postDb,
-            'coarseT': coarseT,
-            'coarsePowerDb': coarsePowerDb
+            'postDb': postDb
         }
     }
 
