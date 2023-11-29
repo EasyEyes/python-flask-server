@@ -201,8 +201,8 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
     coarseT = np.round(coarseT, 3).tolist()
     coarsePowerDb = np.round(coarsePowerDb,3).tolist()
-    start = np.interp(_calibrateSoundBurstSec,coarseT,coarsePowerDb)
-    end = np.interp(_calibrateSoundBurstSec * repeats, coarseT,coarsePowerDb)
+    start = round(np.interp(_calibrateSoundBurstSec,coarseT,coarsePowerDb),3)
+    end = round(np.interp(_calibrateSoundBurstSec * repeats, coarseT,coarsePowerDb),3)
     warmupT = coarseT[:prepSamples]
     warmupDb = coarsePowerDb[:prepSamples]
     # correct starting point and end point of each period, to make lines connected
@@ -248,8 +248,8 @@ def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
     coarseT = np.round(coarseT, 3).tolist()
     coarsePowerDb = np.round(coarsePowerDb,3).tolist()
-    start = np.interp(preSec,coarseT,coarsePowerDb)
-    end = np.interp((preSec + Sec),coarseT,coarsePowerDb)
+    start = round(np.interp(preSec,coarseT,coarsePowerDb),3)
+    end = round(np.interp((preSec + Sec),coarseT,coarsePowerDb),3)
     preT = coarseT[:prepSamples]
     preDb = coarsePowerDb[:prepSamples]
     # correct starting point and end point of each period, to make lines connected
