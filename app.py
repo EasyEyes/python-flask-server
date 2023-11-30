@@ -212,6 +212,10 @@ def handle_volume_task_nonlinear(request_json, task):
     sampleRate = request_json["sample-rate"]
     lCalib = request_json["lCalib"]
     soundGainDbSPL, P, L, _, L1000, P1000, thd, rms, soundGainDbSPL1000 = run_volume_task_nonlinear(recordedSignalJson, sampleRate) #L is outDbSPL
+    print("soundGainDbSPL", soundGainDbSPL)
+    print("outDbSPL", L)
+    print("outDbSPL1000", L1000)
+    print("thd", thd)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"==============  volume_task_nonlinear task, time taken: {elapsed_time}s ==============")
