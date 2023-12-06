@@ -211,9 +211,12 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
         warmupDb = warmupDb + [start]
     recT = coarseT[prepSamples:postSamples]
     recDb = coarsePowerDb[prepSamples:postSamples]
-    if recT[0] > _calibrateSoundBurstSec:
+
+    if recT[0] > float(_calibrateSoundBurstSec):
+        print("need interpolate power")
         recT = [_calibrateSoundBurstSec] + coarseT[prepSamples:postSamples]
         recDb = [start] + coarsePowerDb[prepSamples:postSamples]
+
     if rec[-1] < (_calibrateSoundBurstSec * repeats):
         recT = coarseT[prepSamples:postSamples] + [(_calibrateSoundBurstSec * repeats)]
         recDb = coarsePowerDb[prepSamples:postSamples] + [end]
