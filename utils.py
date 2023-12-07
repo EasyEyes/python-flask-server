@@ -214,12 +214,12 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
 
     if recT[0] > float(_calibrateSoundBurstSec):
         print("need interpolate power")
-        recT = [_calibrateSoundBurstSec] + coarseT[prepSamples:postSamples]
-        recDb = [start] + coarsePowerDb[prepSamples:postSamples]
+        recT = [_calibrateSoundBurstSec] + recT
+        recDb = [start] + recDb
 
     if rec[-1] < (_calibrateSoundBurstSec * repeats):
-        recT = coarseT[prepSamples:postSamples] + [(_calibrateSoundBurstSec * repeats)]
-        recDb = coarsePowerDb[prepSamples:postSamples] + [end]
+        recT = recT + [(_calibrateSoundBurstSec * repeats)]
+        recDb = recDb + [end]
     postT = coarseT[postSamples:]
     postDb = coarsePowerDb[postSamples:]
     if postT[0] > (_calibrateSoundBurstSec * repeats):
@@ -262,11 +262,11 @@ def volumePowerCheck(rec, fs, preSec, Sec, _calibrateSoundPowerBinDesiredSec):
     recT = coarseT[prepSamples:postSamples]
     recDb = coarsePowerDb[prepSamples:postSamples]
     if recT[0] > preSec:
-        recT = [preSec] + coarseT[prepSamples:postSamples]
-        recDb = [start] + coarsePowerDb[prepSamples:postSamples]
+        recT = [preSec] + recT
+        recDb = [start] + recDb
     if rec[-1] < (preSec + Sec):
-        recT = coarseT[prepSamples:postSamples] + [(preSec + Sec)]
-        recDb = coarsePowerDb[prepSamples:postSamples] + [end]
+        recT = recT + [(preSec + Sec)]
+        recDb = recDb + [end]
     postT = coarseT[postSamples:]
     postDb = coarsePowerDb[postSamples:]
     if postT[0] > (preSec + Sec):
