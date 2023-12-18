@@ -113,8 +113,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'iirLength'"
     if "num_periods" not in request_json:
         return 400, "Request body is missing a 'num_periods'"
-    if "calibrateSoundBurstDb" not in request_json:
-        return 400, "Request body is missing a 'calibrateSoundBurstDb'"
+    if "mlsAmplitude" not in request_json:
+        return 400, "Request body is missing a 'mlsAmplitude'"
     if "irLength" not in request_json:
         return 400, "Request body is missing a 'irLength'"
     if "calibrateSoundSmoothOctaves" not in request_json:
@@ -129,11 +129,10 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     componentIRFreqs = request_json["componentIRFreqs"]
     sampleRate = request_json["sampleRate"]
     num_periods = request_json["num_periods"]
-    calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
+    mls_amplitude = request_json["mlsAmplitude"]
     irLength = request_json["irLength"]
     calibrateSoundSmoothOctaves = request_json["calibrateSoundSmoothOctaves"]
-    
-    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength, calibrateSoundSmoothOctaves)
+    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== component_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
@@ -147,7 +146,9 @@ def handle_component_inverse_impulse_response_task(request_json, task):
                         "irTime": ir_time,
                         "component_angle": angle,
                         "system_angle":system_angle,
-                        "irOrigin": ir_origin
+                        "irOrigin": ir_origin,
+                        "attenuatorGain_dB":attenuatorGain_dB,
+                        "fMaxHz":fMaxHz
                     }
     }
 
@@ -175,8 +176,8 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     highHz = request_json["highHz"]
     sampleRate = request_json["sampleRate"]
     num_periods = request_json["num_periods"]
-    calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
-    result, convolution, ir, iir_no_bandpass = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, calibrateSoundBurstDb)
+    mls_amplitude = request_json["mlsAmplitude"]
+    result, convolution, ir, iir_no_bandpass, attenuatorGain_dB, fMaxHz = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, mls_amplitude)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== system_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
@@ -185,7 +186,9 @@ def handle_system_inverse_impulse_response_task(request_json, task):
                         "iir":result,
                         "convolution":convolution,
                         "ir":ir,
-                        "iirNoBandpass":iir_no_bandpass
+                        "iirNoBandpass":iir_no_bandpass,
+                        "attenuatorGain_dB":attenuatorGain_dB,
+                        "fMaxHz":fMaxHz
                     }
     }
 
@@ -310,12 +313,12 @@ def handle_mls_task(request_json,task):
     start_time = time.time()
     #length of mls will be 2**nbits - 1
     desired_length = request_json["length"]
-    calibrateSoundBurstDb = request_json["calibrateSoundBurstDb"]
+    amplitude = request_json["amplitude"]
     nbits = math.ceil(math.log(desired_length + 1, 2))
     ret_arr = max_len_seq(nbits,length=desired_length)
     mls = ret_arr[0]
     mls_transformed = np.where(mls == 0, -1, 1)
-    scaled_mls_transformed = mls_transformed * calibrateSoundBurstDb
+    scaled_mls_transformed = mls_transformed * amplitude
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"================ handle_mls task, time taken: {elapsed_time}s ================")

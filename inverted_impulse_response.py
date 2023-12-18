@@ -2,7 +2,7 @@ import numpy as np
 import math
 from scipy.fft import fft, ifft, irfft, fftfreq
 from pickle import loads
-from scipy.signal import lfilter
+from scipy.signal import lfilter, butter
 from scipy.interpolate import interp1d
 
 def ifft_sym(sig):
@@ -173,7 +173,7 @@ def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3):
     
     return smoothed_spectrum
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, calibrateSoundBurstDb, irLength, calibrateSoundSmoothOctaves, debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -199,6 +199,69 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     mls = np.array(mls)
     orig_mls = mls
 
+    ####cheap transducer trello
+    #Convolve three periods of MLS with IIR. Retain only the middle period.
+    three_mls_periods = np.tile(mls,3);
+    three_mls_periods_convolution = lfilter(inverse_response_component,1,three_mls_periods)
+    period_length = len(mls)
+    start_index = period_length
+    end_index = start_index + period_length
+    middle_period_convolution = three_mls_periods_convolution[start_index:end_index]
+    middle_period_convolution = middle_period_convolution * mls_amplitude
+    #middle_period_convolution = mls * mls_amplitude
+    #compute fft and cumulative power below the cut of frequency as a function of the cut off frequency
+    fft_result = np.fft.fft(middle_period_convolution)
+    fft_magnitude = np.abs(fft_result)
+    half_spectrum = fft_magnitude[:len(fft_result) // 2]
+    n = len(middle_period_convolution)
+
+    power_spectrum = fft_magnitude**2
+
+    frequencies = np.fft.fftfreq(n,d=1/sample_rate)
+    frequencies = frequencies[:len(frequencies) // 2]
+
+    pcum = np.cumsum(half_spectrum)
+    total_power = np.mean(middle_period_convolution**2)
+    pcum = total_power*pcum/pcum[-1]
+    # If MLSPower < PCum(inf) then set fMaxHz to the cut off frequency at which integrated power is MLSPower. 
+    #In MATLAB I would use the interpolation function interp1. Most languages have a similar interpolation function.
+    pcum_infinity = pcum[-1]
+
+    mls_power = mls_amplitude ** 2
+    mls_power_db = 10*np.log10(mls_power)
+    fMaxHz = 0
+    attenuatorGain_dB = 0
+    #print outs
+    fMaxHz = np.interp(mls_power, pcum, frequencies)
+    print('mls_power_db {:.1f}'.format(mls_power_db))
+    print('pcum[-1]  {:.1f} dB'.format(10*np.log10(pcum[-1])))
+    print('fMaxHz {:.0f} Hz'.format(fMaxHz))
+    print('Min frequency: {:.0f} Hz'.format(min(frequencies)))
+    print('Max frequency: {:.0f} Hz'.format(max(frequencies)))
+
+    for i in range(0, len(frequencies), round(len(frequencies)/10)):
+        print(round(frequencies[i]), end=' ')
+    if (mls_power < pcum_infinity):
+        fMaxHz = np.interp(mls_power, pcum, frequencies)
+        if (fMaxHz > 1500):
+            attenuatorGain_dB = 0
+            fMaxHz = min(fMaxHz, highHz)
+        else:
+            fMaxHz = 1500
+            pcum_1500 = np.interp(1500, frequencies, pcum)
+            print("PCUM 1500")
+            print(pcum_1500)
+            print("MLS POWER DB")
+            print(mls_power_db)
+            attenuatorGain_dB = mls_power_db - 10*np.log10(pcum_1500)
+    else:
+        fMaxHz = highHz
+        attenuatorGain_dB = 0
+
+
+    ####apply lowpass filter
+    inverse_response_component, _, _ = calculateInverseIR(ir,lowHz,fMaxHz,iir_length, sample_rate)
+
     #########
     N = 1 + math.ceil(len(inverse_response_component)/len(mls))
     print('N: ' + str(N))
@@ -209,7 +272,13 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     print('length of original convolution: ' + str(len(convolution)))
 
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
-    convolution_div = trimmed_convolution * calibrateSoundBurstDb
+    convolution_div = trimmed_convolution * mls_amplitude
+    print("ATTENUATION gain")
+    print(attenuatorGain_dB)
+    print("fMaxHz")
+    print(fMaxHz)
+    if (attenuatorGain_dB != 0):
+        convolution_div = convolution_div * (10**(attenuatorGain_dB/20))
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
 
@@ -235,9 +304,9 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     smoothed_return_ir = 20*np.log10(abs(smoothed_return_ir))
     return_ir = 20*np.log10(abs(return_ir))
     return_freq = frequencies[:len(frequencies)//2]
-    return inverse_response_component.tolist(), convolution_div.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist()
+    return inverse_response_component.tolist(), convolution_div.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, calibrateSoundBurstDb, debug=False):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, mls_amplitude, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -255,6 +324,70 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     # mls = list(mls.values())
     mls = np.array(mls)
     orig_mls = mls
+    ####cheap transducer trello
+    #Convolve three periods of MLS with IIR. Retain only the middle period.
+    sample_rate=sampleRate
+    three_mls_periods = np.tile(mls,3);
+    three_mls_periods_convolution = lfilter(inverse_response,1,three_mls_periods)
+    period_length = len(mls)
+    start_index = period_length
+    end_index = start_index + period_length
+    middle_period_convolution = three_mls_periods_convolution[start_index:end_index]
+    middle_period_convolution = middle_period_convolution * mls_amplitude
+    #middle_period_convolution = mls * mls_amplitude
+    #compute fft and cumulative power below the cut of frequency as a function of the cut off frequency
+    fft_result = np.fft.fft(middle_period_convolution)
+    fft_magnitude = np.abs(fft_result)
+    half_spectrum = fft_magnitude[:len(fft_result) // 2]
+    n = len(middle_period_convolution)
+
+    power_spectrum = fft_magnitude**2
+
+    frequencies = np.fft.fftfreq(n,d=1/sample_rate)
+    frequencies = frequencies[:len(frequencies) // 2]
+
+    pcum = np.cumsum(half_spectrum)
+    total_power = np.mean(middle_period_convolution**2)
+    pcum = total_power*pcum/pcum[-1]
+    # If MLSPower < PCum(inf) then set fMaxHz to the cut off frequency at which integrated power is MLSPower. 
+    #In MATLAB I would use the interpolation function interp1. Most languages have a similar interpolation function.
+    pcum_infinity = pcum[-1]
+
+    mls_power = mls_amplitude ** 2
+    mls_power_db = 10*np.log10(mls_power)
+    fMaxHz = 0
+    attenuatorGain_dB = 0
+    #print outs
+    fMaxHz = np.interp(mls_power, pcum, frequencies)
+    print('mls_power_db {:.1f}'.format(mls_power_db))
+    print('pcum[-1]  {:.1f} dB'.format(10*np.log10(pcum[-1])))
+    print('fMaxHz {:.0f} Hz'.format(fMaxHz))
+    print('Min frequency: {:.0f} Hz'.format(min(frequencies)))
+    print('Max frequency: {:.0f} Hz'.format(max(frequencies)))
+
+    for i in range(0, len(frequencies), round(len(frequencies)/10)):
+        print(round(frequencies[i]), end=' ')
+    if (mls_power < pcum_infinity):
+        fMaxHz = np.interp(mls_power, pcum, frequencies)
+        if (fMaxHz > 1500):
+            attenuatorGain_dB = 0
+            fMaxHz = min(fMaxHz, highHz)
+        else:
+            fMaxHz = 1500
+            pcum_1500 = np.interp(1500, frequencies, pcum)
+            print("PCUM 1500")
+            print(pcum_1500)
+            print("MLS POWER DB")
+            print(mls_power_db)
+            attenuatorGain_dB = mls_power_db - 10*np.log10(pcum_1500)
+    else:
+        fMaxHz = highHz
+        attenuatorGain_dB = 0
+
+
+    ####apply lowpass filter
+    inverse_response, _, _ = calculateInverseIR(ir,lowHz,fMaxHz,iir_length, sample_rate)
+
     ######new method
     N = 1 + math.ceil(len(inverse_response)/len(mls))
     print('N: ' + str(N))
@@ -271,7 +404,13 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     #trimmed_convolution = convolution[start_index:end_index]
     print('length of original convolution: ' + str(len(convolution)))
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
-    convolution_div = trimmed_convolution * calibrateSoundBurstDb
+    convolution_div = trimmed_convolution * mls_amplitude #really amplitude
+    print("ATTENUATION gain")
+    print(attenuatorGain_dB)
+    print("fMaxHz")
+    print(fMaxHz)
+    if (attenuatorGain_dB != 0):
+        convolution_div = convolution_div * (10**(attenuatorGain_dB/20))
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
 
@@ -304,4 +443,4 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     # convolution_div = convolution
     #############
 
-    return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist()
+    return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist(), attenuatorGain_dB, fMaxHz
