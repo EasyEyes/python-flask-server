@@ -173,7 +173,7 @@ def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3):
     
     return smoothed_spectrum
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -232,7 +232,9 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     fMaxHz = 0
     attenuatorGain_dB = 0
     #print outs
-    fMaxHz = np.interp(mls_power, pcum, frequencies)
+    calibrate_sound_burst_filtered_extra_power = 10 ** ( calibrate_sound_burst_filtered_extra_db / 10)
+    fMaxHz = np.interp(mls_power + calibrate_sound_burst_filtered_extra_power, pcum, frequencies)
+    fMaxHz = round(fMaxHz /100) * 100
     print('mls_power_db {:.1f}'.format(mls_power_db))
     print('pcum[-1]  {:.1f} dB'.format(10*np.log10(pcum[-1])))
     print('fMaxHz {:.0f} Hz'.format(fMaxHz))
@@ -243,6 +245,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
         print(round(frequencies[i]), end=' ')
     if (mls_power < pcum_infinity):
         fMaxHz = np.interp(mls_power, pcum, frequencies)
+        fMaxHz = round(fMaxHz /100) * 100
         if (fMaxHz > 1500):
             attenuatorGain_dB = 0
             fMaxHz = min(fMaxHz, highHz)
@@ -306,7 +309,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     return_freq = frequencies[:len(frequencies)//2]
     return inverse_response_component.tolist(), convolution_div.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, mls_amplitude, debug=False):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -358,7 +361,9 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     fMaxHz = 0
     attenuatorGain_dB = 0
     #print outs
-    fMaxHz = np.interp(mls_power, pcum, frequencies)
+    calibrate_sound_burst_filtered_extra_power = 10 ** ( calibrate_sound_burst_filtered_extra_db / 10)
+    fMaxHz = np.interp(mls_power + calibrate_sound_burst_filtered_extra_power, pcum, frequencies)
+    fMaxHz = round(fMaxHz /100) * 100
     print('mls_power_db {:.1f}'.format(mls_power_db))
     print('pcum[-1]  {:.1f} dB'.format(10*np.log10(pcum[-1])))
     print('fMaxHz {:.0f} Hz'.format(fMaxHz))

@@ -119,6 +119,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'irLength'"
     if "calibrateSoundSmoothOctaves" not in request_json:
         return 400, "Request body is missing a 'calibrateSoundSmoothOctaves'"
+    if "calibrateSoundBurstFilteredExtraDb" not in request_json:
+        return 400, "Request body is missing a 'calibrateSoundBurstFilteredExtraDb'"
     start_time = time.time()
     impulseResponsesJson = request_json["payload"]
     iir_length = request_json["iirLength"]
@@ -132,7 +134,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     mls_amplitude = request_json["mlsAmplitude"]
     irLength = request_json["irLength"]
     calibrateSoundSmoothOctaves = request_json["calibrateSoundSmoothOctaves"]
-    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves)
+    calibrate_sound_burst_filtered_extra_db = request_json["calibrateSoundBurstFilteredExtraDb"]
+    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== component_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
@@ -168,6 +171,8 @@ def handle_system_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'iirLength'"
     if "num_periods" not in request_json:
         return 400, "Request body is missing a 'num_periods'"
+    if "calibrateSoundBurstFilteredExtraDb" not in request_json:
+        return 400, "Request body is missing a 'calibrateSoundBurstFilteredExtraDb'"
 
     impulseResponsesJson = request_json["payload"]
     iir_length = request_json["iirLength"]
@@ -177,7 +182,8 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     sampleRate = request_json["sampleRate"]
     num_periods = request_json["num_periods"]
     mls_amplitude = request_json["mlsAmplitude"]
-    result, convolution, ir, iir_no_bandpass, attenuatorGain_dB, fMaxHz = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, mls_amplitude)
+    calibrate_sound_burst_filtered_extra_db = request_json["calibrateSoundBurstFilteredExtraDb"]
+    result, convolution, ir, iir_no_bandpass, attenuatorGain_dB, fMaxHz = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, mls_amplitude,calibrate_sound_burst_filtered_extra_db)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== system_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
