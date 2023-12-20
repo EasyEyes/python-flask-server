@@ -245,7 +245,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     for i in range(0, len(frequencies), round(len(frequencies)/10)):
         print(round(frequencies[i]), end=' ')
     if (mls_power < pcum_infinity):
-        fMaxHz = np.interp(mls_power, pcum, frequencies)
+        fMaxHz = np.interp(mls_power + calibrate_sound_burst_filtered_extra_power, pcum, frequencies)
         fMaxHz = round(fMaxHz /100) * 100
         if (fMaxHz > 1500):
             attenuatorGain_dB = 0
@@ -375,7 +375,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     for i in range(0, len(frequencies), round(len(frequencies)/10)):
         print(round(frequencies[i]), end=' ')
     if (mls_power < pcum_infinity):
-        fMaxHz = np.interp(mls_power, pcum, frequencies)
+        fMaxHz = np.interp(mls_power + calibrate_sound_burst_filtered_extra_power, pcum, frequencies)
         fMaxHz = round(fMaxHz /100) * 100
         if (fMaxHz > 1500):
             attenuatorGain_dB = 0
