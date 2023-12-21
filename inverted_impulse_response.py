@@ -264,7 +264,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
 
     ####apply lowpass filter
-    inverse_response_component, _, _ = calculateInverseIR(ir,lowHz,fMaxHz,iir_length, sample_rate)
+    inverse_response_component, _, _ = calculateInverseIR(ir_component,lowHz,fMaxHz,iir_length, sample_rate)
 
     #########
     N = 1 + math.ceil(len(inverse_response_component)/len(mls))
