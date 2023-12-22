@@ -233,32 +233,32 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     attenuatorGain_dB = 0
     #print outs
     print('calibrate_sound_burst_filtered_extra_db ' + str(calibrate_sound_burst_filtered_extra_db))
-    calibrate_sound_burst_filtered_extra_power = 10 ** ( calibrate_sound_burst_filtered_extra_db / 10)
-    fMaxHz = np.interp(mls_power + calibrate_sound_burst_filtered_extra_power, pcum, frequencies)
-    fMaxHz = round(fMaxHz /100) * 100
+    calibrate_sound_burst_filtered_power_factor = 10 ** ( calibrate_sound_burst_filtered_extra_db / 10)
+
     print('mls_power_db {:.1f}'.format(mls_power_db))
     print('pcum[-1]  {:.1f} dB'.format(10*np.log10(pcum[-1])))
-    print('fMaxHz {:.0f} Hz'.format(fMaxHz))
     print('Min frequency: {:.0f} Hz'.format(min(frequencies)))
     print('Max frequency: {:.0f} Hz'.format(max(frequencies)))
-
     for i in range(0, len(frequencies), round(len(frequencies)/10)):
         print(round(frequencies[i]), end=' ')
-    if (mls_power < pcum_infinity):
-        fMaxHz = np.interp(mls_power + calibrate_sound_burst_filtered_extra_power, pcum, frequencies)
+
+    power_limit = mls_power*calibrate_sound_burst_filtered_power_factor
+    if (power_limit < pcum_infinity):
+        fMaxHz = np.interp(power_limit, pcum, frequencies)
         fMaxHz = round(fMaxHz /100) * 100
+        print("power_limit < pcum_infinity")
+        print('fMaxHz {:.0f} Hz'.format(fMaxHz))
         if (fMaxHz > 1500):
             attenuatorGain_dB = 0
+            print('fmax > 1500')
+            print('fMaxHz {:.0f} Hz'.format(fMaxHz))
             fMaxHz = min(fMaxHz, highHz)
         else:
             fMaxHz = 1500
             pcum_1500 = np.interp(1500, frequencies, pcum)
-            print("PCUM 1500")
-            print(pcum_1500)
-            print("MLS POWER DB")
-            print(mls_power_db)
             attenuatorGain_dB = mls_power_db - 10*np.log10(pcum_1500)
     else:
+        print("power_limit > pcum_infinity")
         fMaxHz = highHz
         attenuatorGain_dB = 0
 
@@ -363,19 +363,18 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     attenuatorGain_dB = 0
     #print outs
     print('calibrate_sound_burst_filtered_extra_db ' + str(calibrate_sound_burst_filtered_extra_db))
-    calibrate_sound_burst_filtered_extra_power = 10 ** ( calibrate_sound_burst_filtered_extra_db / 10)
-    fMaxHz = np.interp(mls_power + calibrate_sound_burst_filtered_extra_power, pcum, frequencies)
-    fMaxHz = round(fMaxHz /100) * 100
+    calibrate_sound_burst_filtered_power_factor = 10 ** ( calibrate_sound_burst_filtered_extra_db / 10)
+
     print('mls_power_db {:.1f}'.format(mls_power_db))
     print('pcum[-1]  {:.1f} dB'.format(10*np.log10(pcum[-1])))
-    print('fMaxHz {:.0f} Hz'.format(fMaxHz))
     print('Min frequency: {:.0f} Hz'.format(min(frequencies)))
     print('Max frequency: {:.0f} Hz'.format(max(frequencies)))
 
     for i in range(0, len(frequencies), round(len(frequencies)/10)):
         print(round(frequencies[i]), end=' ')
-    if (mls_power < pcum_infinity):
-        fMaxHz = np.interp(mls_power + calibrate_sound_burst_filtered_extra_power, pcum, frequencies)
+    power_limit = mls_power*calibrate_sound_burst_filtered_power_factor
+    if (power_limit < pcum_infinity):
+        fMaxHz = np.interp(power_limit, pcum, frequencies)
         fMaxHz = round(fMaxHz /100) * 100
         if (fMaxHz > 1500):
             attenuatorGain_dB = 0
