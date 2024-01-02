@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 from scipy.fft import fft, ifft, rfft, irfft
 from pickle import dumps
 
@@ -68,7 +69,7 @@ def estimate_samples_per_mls_(output_signal, num_periods, sampleRate, L):
     # output_spectrum = np.array(fft(output_signal), dtype=complex)
     output_spectrum = fft(output_signal)
     output_autocorrelation = ifft_sym(output_spectrum * np.conjugate(output_spectrum))
-    return_output_autocorrelation = output_autocorrelation
+    return_output_autocorrelation = copy.copy(output_autocorrelation)
     
     # # Find the second-order differences
     # inflection = np.diff(np.sign(np.diff(ouptut_autocorrelation)))
