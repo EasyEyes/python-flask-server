@@ -263,5 +263,5 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
     if debug:
         return ir, autocorrelation
     else:
-        return ir.tolist(), autocorrelation.tolist()
+        return ir.tolist(), autocorrelation.tolist(), L_new_n.tolist()
     
