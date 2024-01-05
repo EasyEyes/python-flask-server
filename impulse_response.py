@@ -259,9 +259,10 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
     OUT_MLS2_n = adjust_mls_length(sig, NUM_PERIODS, L, L_new_n, dL_n)
 
     ir = compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2)
+    L_n = NUM_PERIODS * L
     print("computed ir")
     if debug:
         return ir, autocorrelation
     else:
-        return ir.tolist(), autocorrelation.tolist(), L_new_n.tolist()
+        return ir.tolist(), autocorrelation.tolist(), L_new_n.tolist(), L_n.tolist()
     
