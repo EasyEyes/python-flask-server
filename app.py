@@ -44,7 +44,7 @@ def handle_impulse_response_task(request_json, task):
     NUM_PERIODS = request_json["numPeriods"]
     NUM_PERIODS = int(NUM_PERIODS)
     print("Starting IR Task")
-    ir, autocorrelation, L_new_n= run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
+    ir, autocorrelation, L_new_n, fs2 = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== handle_impulse_response task, time taken: {elapsed_time}s ==============")
@@ -52,7 +52,8 @@ def handle_impulse_response_task(request_json, task):
         str(task): {
             'ir':ir,
             'autocorrelation': autocorrelation,
-            'L_new_n': L_new_n
+            'L_new_n': L_new_n,
+            'fs2': fs2
         }
     }
 
