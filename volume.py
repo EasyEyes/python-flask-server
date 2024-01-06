@@ -208,4 +208,5 @@ def run_volume_task_nonlinear(recordedSignalJson, sampleRate):
     soundGainDbSPL, P, L, vectorDb = getCalibration(sig, sinewave)
     outDBSPL1000, P1000, soundGainDbSPL1000 = HarmonicPower(sig,sampleRate_2,1000)
     thd, rms = THD(sig,sampleRate_2)
+    print("Sample Rate 2: " + str(sampleRate_2))
     return soundGainDbSPL, P, L, vectorDb, outDBSPL1000, P1000, thd, rms, soundGainDbSPL1000
