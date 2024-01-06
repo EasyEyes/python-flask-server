@@ -196,8 +196,16 @@ def run_volume_task_nonlinear(recordedSignalJson, sampleRate):
     global lCalib
     lCalib = 0
     sig = np.array(recordedSignalJson, dtype=np.float32)
-    sinewave = generateSineWave(sampleRate) # Generate sine wave for comparison
+    # Perform FFT
+    fft_result = fft(sig)
+    fft_freq = np.fft.fftfreq(len(fft_result), 1/sampleRate)  # Frequency values for the FFT result
+
+    # Find the peak frequency
+    peak_index = np.argmax(np.abs(fft_result))
+    peak_frequency = np.abs(fft_freq[peak_index])
+    sampleRate_2 = (1000/peak_frequency) * sampleRate
+    sinewave = generateSineWave(sampleRate_2) # Generate sine wave for comparison
     soundGainDbSPL, P, L, vectorDb = getCalibration(sig, sinewave)
-    outDBSPL1000, P1000, soundGainDbSPL1000 = HarmonicPower(sig,sampleRate,1000)
-    thd, rms = THD(sig,sampleRate)
+    outDBSPL1000, P1000, soundGainDbSPL1000 = HarmonicPower(sig,sampleRate_2,1000)
+    thd, rms = THD(sig,sampleRate_2)
     return soundGainDbSPL, P, L, vectorDb, outDBSPL1000, P1000, thd, rms, soundGainDbSPL1000
