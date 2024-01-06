@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import scipy.optimize #add to requirements
+from scipy.fft import fft
 
 debug = False
 ref_power = 2 * 10**-10  # power of the smallest sound you can hear
