@@ -273,8 +273,8 @@ def handle_psd_task(request_json,task):
     sampleRate = request_json["sampleRate"]
     print('length of rec')
     print(len(rec_unconv))
-    [y_unconv, x_unconv] = plt.psd(rec_unconv,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
-    [y_conv,x_conv] = plt.psd(rec_conv, Fs=sampleRate, NFFT=2048,scale_by_freq=False)
+    [y_unconv, x_unconv] = plt.psd(rec_unconv,Fs=sampleRate, window=plt.mlab.window_none, NFFT=2048,scale_by_freq=False)
+    [y_conv,x_conv] = plt.psd(rec_conv, Fs=sampleRate, window=plt.mlab.window_none, NFFT=2048,scale_by_freq=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"================ psd_task, time taken: {elapsed_time}s ================")
@@ -306,7 +306,7 @@ def handle_mls_psd_task(request_json,task):
     start_time = time.time()
     mls = request_json["mls"]
     sampleRate = request_json["sampleRate"]
-    [y_mls, x_mls] = plt.psd(mls,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
+    [y_mls, x_mls] = plt.psd(mls,Fs=sampleRate, window=plt.mlab.window_none, NFFT=2048,scale_by_freq=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"================ handle_mls_psd task, time taken: {elapsed_time}s ================")
