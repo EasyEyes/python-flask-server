@@ -207,13 +207,21 @@ def run_volume_task_nonlinear(recordedSignalJson, sampleRate):
 
     # Filter the frequency values within the specified range
     mask = (fft_freq >= min_frequency) & (fft_freq <= max_frequency)
-
-    # Apply the mask to the FFT result to get values within the specified range
-    masked_fft_result = fft_result[mask]
-
-    # Find the peak frequency within the specified range
-    peak_index_within_range = np.argmax(np.abs(masked_fft_result))
-    peak_frequency_within_range = np.abs(fft_freq[mask][peak_index_within_range])
+    print('length of mask', len(mask))
+    print('min_frequency', min_frequency)
+    print('max_frequency', max_frequency)
+    print('min fft_freq', min(fft_freq))
+    print('max fft_freq', max(fft_freq))
+    if len(mask) == 0:
+        peak_frequency_within_range = 1000
+    else:
+        masked_fft_result = fft_result[mask]
+        # Find the peak frequency within the specified range
+        # Apply the mask to the FFT result to get values within the specified range
+        peak_index_within_range = np.argmax(np.abs(masked_fft_result))
+        peak_frequency_within_range = np.abs(fft_freq[mask][peak_index_within_range])
+    
+    
     # Find the peak frequency
     # peak_index = np.argmax(np.abs(fft_result))
     # peak_frequency = np.abs(fft_freq[peak_index])
