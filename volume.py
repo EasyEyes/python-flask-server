@@ -201,10 +201,23 @@ def run_volume_task_nonlinear(recordedSignalJson, sampleRate):
     fft_result = fft(sig)
     fft_freq = np.fft.fftfreq(len(fft_result), 1/sampleRate)  # Frequency values for the FFT result
 
+    # Define the frequency range
+    min_frequency = 0.9 * sampleRate
+    max_frequency = 1.1 * sampleRate
+
+    # Filter the frequency values within the specified range
+    mask = (fft_freq >= min_frequency) & (fft_freq <= max_frequency)
+
+    # Apply the mask to the FFT result to get values within the specified range
+    masked_fft_result = fft_result[mask]
+
+    # Find the peak frequency within the specified range
+    peak_index_within_range = np.argmax(np.abs(masked_fft_result))
+    peak_frequency_within_range = np.abs(fft_freq[mask][peak_index_within_range])
     # Find the peak frequency
-    peak_index = np.argmax(np.abs(fft_result))
-    peak_frequency = np.abs(fft_freq[peak_index])
-    sampleRate_2 = (1000/peak_frequency) * sampleRate
+    # peak_index = np.argmax(np.abs(fft_result))
+    # peak_frequency = np.abs(fft_freq[peak_index])
+    sampleRate_2 = (1000/peak_frequency_within_range) * sampleRate
     sinewave = generateSineWave(sampleRate_2) # Generate sine wave for comparison
     soundGainDbSPL, P, L, vectorDb = getCalibration(sig, sinewave)
     outDBSPL1000, P1000, soundGainDbSPL1000 = HarmonicPower(sig,sampleRate_2,1000)
