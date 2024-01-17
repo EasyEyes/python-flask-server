@@ -199,7 +199,7 @@ def adjust_mls_length(output_signal, num_periods, L, L_new_n, dL_n):
     return OUT_MLS2_n
 
 
-def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
+def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2, NUM_PERIODS):
     '''
     % apply the ifft with Hermitian symmetry
     out_mls2_n = ifft(OUT_MLS2_n, 'symmetric');
@@ -219,7 +219,8 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
     out_mls2 = out_mls2_n(1+L:2*L);
     OUT_MLS2 = fft(out_mls2);
     '''
-    out_mls2 = out_mls2_n[L:2*L]
+    out_mls2 = out_mls2_n[0:NUM_PERIODS*L]
+    print('NUM_PERIODS', NUM_PERIODS)
     # out_mls2 = out_mls2_n[0:L]
     print("Length of out_mls2= " + str(len(out_mls2)))
     OUT_MLS2 = fft(out_mls2)
@@ -232,6 +233,7 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2):
     % new frequency axis
     frequency_axis = linspace(0, fs2, length(ir)+1); frequency_axis(end) = [];
     '''
+    MLS = np.tile(MLS, NUM_PERIODS)
     prod = np.multiply(OUT_MLS2, MLS.conj())
     # N = len(prod)
     # right_idx = int(N / 2) + 1
@@ -258,7 +260,7 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
 
     OUT_MLS2_n = adjust_mls_length(sig, NUM_PERIODS, L, L_new_n, dL_n)
 
-    ir = compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2)
+    ir = compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2, NUM_PERIODS)
     print("computed ir")
     if debug:
         return ir, autocorrelation

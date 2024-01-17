@@ -331,7 +331,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     ####cheap transducer trello
     #Convolve three periods of MLS with IIR. Retain only the middle period.
     sample_rate=sampleRate
-    three_mls_periods = np.tile(mls,3);
+    three_mls_periods = np.tile(mls,3)
     three_mls_periods_convolution = lfilter(inverse_response,1,three_mls_periods)
     period_length = len(mls)
     start_index = period_length
