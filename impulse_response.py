@@ -234,11 +234,13 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2, NUM_PERIODS):
     frequency_axis = linspace(0, fs2, length(ir)+1); frequency_axis(end) = [];
     '''
     MLS = np.tile(MLS, NUM_PERIODS)
+    MLS = MLS / max(MLS)
     prod = np.multiply(OUT_MLS2, MLS.conj())
     # N = len(prod)
     # right_idx = int(N / 2) + 1
     # ir = ifft(prod[0:right_idx]) / (L * 2)
-    ir = ifft_sym(prod) / L * 2
+    # ir = ifft_sym(prod) / L * 2
+    ir = ifft_sym(prod) / np.sqrt(len(prod))
     return ir
 
 '''
