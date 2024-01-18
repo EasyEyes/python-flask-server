@@ -68,9 +68,9 @@ def CompressorDb(inDb,T,R,W): #microphone compressor, rename CompressorDb => mic
     # updated Jan 18th, 2024
     Q = 1 / R
     WFinal = W if W >= 0 else 0
-    if (inDb > (T+WFinal/2)):
+    if (inDb >= (T+WFinal/2)):
         compressorDb = T + Q *(inDb -T)
-    elif (inDb > T-WFinal/2):
+    elif (inDb >= T-WFinal/2):
         compressorDb=inDb+(1 - Q)*(inDb-(T-WFinal/2))**2/(2*WFinal)
     else:
         compressorDb=inDb
