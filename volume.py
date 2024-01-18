@@ -65,15 +65,16 @@ def microphoneCompressorDb(outDbSpl,T,R,W): #pass correct gain, T, R, W are dist
     
 
 def CompressorDb(inDb,T,R,W): #microphone compressor, rename CompressorDb => microphoneCompressorDb, accept S but convert S to R
+    # updated Jan 18th, 2024
+    Q = 1 / R
     WFinal = W if W >= 0 else 0
     if (inDb > (T+WFinal/2)):
-        outDb = T + (inDb -T) /R
+        compressorDb = T + Q *(inDb -T)
     elif (inDb > T-WFinal/2):
-        outDb=inDb+(1/R-1)*(inDb-(T-WFinal/2))**2/(2*WFinal)
+        compressorDb=inDb+(1 - Q)*(inDb-(T-WFinal/2))**2/(2*WFinal)
     else:
-        outDb=inDb
-
-    return outDb
+        compressorDb=inDb
+    return compressorDb
 
 def CalculateRMSError(inDBValues,outDBSPLValues,backgroundDBSPL,gainDBSPL,T,R,W,componentGainDBSPL):
     err = []
@@ -97,7 +98,7 @@ def CompressorInverseDb(outDb,T,R,W): #accept S but convert S to R
 
     return inDb
 
-def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W,componentGainDBSPL): #include parameter for component gainDbSpl
+def SoundLevelModel(inDb,backgroundDbSpl,gain_dB,T,R,W,componentGainDBSPL): #include parameter for component gainDbSpl
     #currently does not include loudspeaker compression, enhance to 1) apply loudspeaker compression. there will be 2 gains: gain at short distance
     #and gain at long distance. make a note on physical data if collected near or far
     
@@ -107,8 +108,10 @@ def SoundLevelModel(inDb,backgroundDbSpl,gainDbSpl,T,R,W,componentGainDBSPL): #i
     #3) outDbSpl = CompressorDb(outDbSpl, T_mic, R_mic, W_mic) #define S as S=1/R 
   
     # outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+(gainDbSpl - componentGainDBSPL))/10))
-    outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+gainDbSpl)/10)) #adding gain and background noise
-    outDbSpl = CompressorDb(outDbSpl, T, R, W)
+    # outDbSpl=10*math.log10(10**(backgroundDbSpl/10)+10**((inDb+gainDbSpl)/10))
+    # updated Jan 18, 2024, removed backgroundDbSpl
+    compressorDb = CompressorDb(inDb, T, R, W)
+    outDbSpl = compressorDb + gain_dB
     return outDbSpl
 
 def second_largest(arr):
