@@ -2,7 +2,7 @@ import numpy as np
 import math
 from scipy.fft import fft, ifft, irfft, fftfreq
 from pickle import loads
-from scipy.signal import lfilter, butter
+from scipy.signal import lfilter, butter, minimum_phase
 from scipy.interpolate import interp1d
 
 def ifft_sym(sig):
@@ -115,13 +115,14 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
     nfft = L
     H = np.abs(fft(ir_pruned))
     iH = np.conj(H)/(np.conj(H)*H)
+    iH = np.square(iH)
     limit_ranges = [lowHz, highHz] #was 100 and 16000
     iH = limitInverseResponseBandwidth(iH, fs, limit_ranges)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
     #inverse_ir = smoothing_win * inverse_ir
     inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
-
-    return inverse_ir, scale_value, ir_pruned
+    inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
+    return inverse_ir_min, scale_value, ir_pruned
 
 def splitter(system_ir,partIRHz,partIRDb,partIRDeg,fs=48000):
   systemSpectrum = fft(system_ir)
