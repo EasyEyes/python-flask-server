@@ -94,11 +94,12 @@ def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000, componen
     H = np.abs(fft(ir_pruned))
         
     iH = np.conj(H)/(np.conj(H)*H)
+    iH = np.square(iH)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
     #inverse_ir = smoothing_win * inverse_ir
     inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
-
-    return inverse_ir, scale_value, ir_pruned
+    inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
+    return inverse_ir_min, scale_value, ir_pruned
 
 def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
 
@@ -274,16 +275,20 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     print('length of tiled mls: ' + str(len(mls)))
     print('length of inverse_response: ' + str(len(inverse_response_component)))
     convolution = lfilter(inverse_response_component,1,mls)
+    convolution_no_bandpass = lfilter(inverse_response_no_bandpass,1,mls)
     print('length of original convolution: ' + str(len(convolution)))
 
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
     convolution_div = trimmed_convolution * mls_amplitude
+    trimmed_convolution_no_bandpass = convolution_no_bandpass[(len(orig_mls)*(N-1)):]
+    convolution_div_no_bandpass = trimmed_convolution_no_bandpass * mls_amplitude
     print("ATTENUATION gain")
     print(attenuatorGain_dB)
     print("fMaxHz")
     print(fMaxHz)
     if (attenuatorGain_dB != 0):
         convolution_div = convolution_div * (10**(attenuatorGain_dB/20))
+        convolution_div_no_bandpass = convolution_div_no_bandpass * (10**(attenuatorGain_dB/20))
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
 
@@ -309,7 +314,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     smoothed_return_ir = 20*np.log10(abs(smoothed_return_ir))
     return_ir = 20*np.log10(abs(return_ir))
     return_freq = frequencies[:len(frequencies)//2]
-    return inverse_response_component.tolist(), convolution_div.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz
+    return inverse_response_component.tolist(), convolution_div.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz, convolution_div_no_bandpass.tolist()
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, debug=False):
     impulseResponses= impulse_responses_json
@@ -403,6 +408,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     print('length of tiled mls: ' + str(len(mls)))
     print('length of inverse_response: ' + str(len(inverse_response)))
     convolution = lfilter(inverse_response,1,mls)
+    convolution_no_bandpass = lfilter(inverse_response_no_bandpass,1,mls)
     #convolution = np.convolve(inverse_response,mls)
     #print('length of original convolution: ' + str(len(convolution)))
    # start_index = (N-1)*len(orig_mls)
@@ -412,13 +418,16 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     #trimmed_convolution = convolution[start_index:end_index]
     print('length of original convolution: ' + str(len(convolution)))
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
+    trimmed_convolution_no_bandpass = convolution_no_bandpass[(len(orig_mls)*(N-1)):]
     convolution_div = trimmed_convolution * mls_amplitude #really amplitude
+    convolution_div_no_bandpass = trimmed_convolution_no_bandpass * mls_amplitude
     print("ATTENUATION gain")
     print(attenuatorGain_dB)
     print("fMaxHz")
     print(fMaxHz)
     if (attenuatorGain_dB != 0):
         convolution_div = convolution_div * (10**(attenuatorGain_dB/20))
+        convolution_div_no_bandpass = convolution_div_no_bandpass * (10**(attenuatorGain_dB/20))
     print('length of convolution: ' + str(len(trimmed_convolution)))
     print(len(trimmed_convolution))
 
@@ -451,4 +460,4 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     # convolution_div = convolution
     #############
 
-    return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist(), attenuatorGain_dB, fMaxHz
+    return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist(), attenuatorGain_dB, fMaxHz, convolution_div_no_bandpass.tolist()

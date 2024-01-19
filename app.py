@@ -137,7 +137,7 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     irLength = request_json["irLength"]
     calibrateSoundSmoothOctaves = request_json["calibrateSoundSmoothOctaves"]
     calibrate_sound_burst_filtered_extra_db = request_json["calibrateSoundBurstFilteredExtraDb"]
-    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db)
+    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz, convolution_no_bandpass = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== component_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
@@ -153,7 +153,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
                         "system_angle":system_angle,
                         "irOrigin": ir_origin,
                         "attenuatorGain_dB":attenuatorGain_dB,
-                        "fMaxHz":fMaxHz
+                        "fMaxHz":fMaxHz,
+                        "convolutionNoBandpass":convolution_no_bandpass
                     }
     }
 
@@ -185,7 +186,7 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     num_periods = request_json["num_periods"]
     mls_amplitude = request_json["mlsAmplitude"]
     calibrate_sound_burst_filtered_extra_db = request_json["calibrateSoundBurstFilteredExtraDb"]
-    result, convolution, ir, iir_no_bandpass, attenuatorGain_dB, fMaxHz = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, mls_amplitude,calibrate_sound_burst_filtered_extra_db)
+    result, convolution, ir, iir_no_bandpass, attenuatorGain_dB, fMaxHz, convolution_no_bandpass = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, mls_amplitude,calibrate_sound_burst_filtered_extra_db)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== system_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
@@ -196,7 +197,8 @@ def handle_system_inverse_impulse_response_task(request_json, task):
                         "ir":ir,
                         "iirNoBandpass":iir_no_bandpass,
                         "attenuatorGain_dB":attenuatorGain_dB,
-                        "fMaxHz":fMaxHz
+                        "fMaxHz":fMaxHz,
+                        "convolutionNoBandpass":convolution_no_bandpass
                     }
     }
 
