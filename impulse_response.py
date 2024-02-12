@@ -2,6 +2,7 @@ import numpy as np
 import copy
 from scipy.fft import fft, ifft, rfft, irfft
 from pickle import dumps
+import os, psutil
 
 
 '''
@@ -213,6 +214,7 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2, NUM_PERIODS):
     print("L= "+str(L))
     print("fs2= " + str(fs2))
     out_mls2_n = ifft_sym(OUT_MLS2_n)
+    print("memory used:", round(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2), "mb")
     print("Length of out_mls2_n= " + str(len(out_mls2_n)))
     '''
     % take only the 1st period of MLS to plot the results
@@ -220,10 +222,12 @@ def compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2, NUM_PERIODS):
     OUT_MLS2 = fft(out_mls2);
     '''
     out_mls2 = out_mls2_n[0:NUM_PERIODS*L]
+    print("memory used:", round(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2), "mb")
     print('NUM_PERIODS', NUM_PERIODS)
     # out_mls2 = out_mls2_n[0:L]
     print("Length of out_mls2= " + str(len(out_mls2)))
     OUT_MLS2 = fft(out_mls2)
+    print("memory used:", round(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2), "mb")
     print("Length of OUT_MLS2= " + str(len(OUT_MLS2)))
 
     '''
@@ -258,11 +262,13 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
     MLS = fft(mls)
     L = len(MLS)
     
+    print("memory used:", round(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2), "mb")
     fs2, L_new_n, dL_n, autocorrelation = estimate_samples_per_mls_(sig, NUM_PERIODS, sampleRate, L)
-
+    print("memory used:", round(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2), "mb")
     OUT_MLS2_n = adjust_mls_length(sig, NUM_PERIODS, L, L_new_n, dL_n)
-
+    print("memory used:", round(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2), "mb")
     ir = compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2, NUM_PERIODS)
+    print("memory used:", round(psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2), "mb")
     print("computed ir")
     if debug:
         return ir, autocorrelation
