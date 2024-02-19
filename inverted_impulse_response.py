@@ -76,7 +76,7 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, targetHz=1000):
     print(f'Using only inverse_ir: targetHz {targetHz:.3f}; scale_value={scale_value:.3f}')
 
     inverse_ir = inverse_ir/scale_value
-    return inverse_ir, scale_value
+    return inverse_ir
 
 def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000, componentIRFreqs = None, componentIRGains = None):
 
@@ -85,7 +85,7 @@ def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000, componen
     nfft = len(original_ir)
     H = np.abs(fft(original_ir))
     ir_new = np.roll(ifft_sym(H),int(nfft/2))
-    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1))/(L+1)))
+    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1), dtype=np.float32)/(L+1)))
     ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)+np.floor(L/2).astype(int)] # centered around -l/2 to L/2
     ir_pruned = smoothing_win * ir_pruned
 
@@ -97,9 +97,9 @@ def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000, componen
     iH = np.square(iH)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
     #inverse_ir = smoothing_win * inverse_ir
-    inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
+    inverse_ir = scaleInverseResponse(inverse_ir,iH,fs)
     inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
-    return inverse_ir_min, scale_value, ir_pruned
+    return inverse_ir_min
 
 def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
 
@@ -108,7 +108,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
     nfft = len(original_ir)
     H = np.abs(fft(original_ir))
     ir_new = np.roll(ifft_sym(H),int(nfft/2))
-    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1))/(L+1)))
+    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1), dtype=np.float32)/(L+1)))
     ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)+np.floor(L/2).astype(int)] # centered around -l/2 to L/2
     ir_pruned = smoothing_win * ir_pruned
 
@@ -121,9 +121,9 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
     iH = limitInverseResponseBandwidth(iH, fs, limit_ranges)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
     #inverse_ir = smoothing_win * inverse_ir
-    inverse_ir, scale_value = scaleInverseResponse(inverse_ir,iH,fs)
+    inverse_ir = scaleInverseResponse(inverse_ir,iH,fs)
     inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
-    return inverse_ir_min, scale_value, ir_pruned
+    return inverse_ir_min
 
 def splitter(system_ir,partIRHz,partIRDb,partIRDeg,fs=48000):
   systemSpectrum = fft(system_ir)
@@ -150,7 +150,7 @@ def prune_ir(original_ir, irLength):
     nfft = len(original_ir)
     H = np.abs(fft(original_ir))
     ir_new = np.roll(ifft_sym(H),int(nfft/2))
-    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1))/(L+1)))
+    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1), dtype=np.float32)/(L+1)))
     ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int) + L] # centered around -l/2 to L/2
     ir_pruned = smoothing_win * ir_pruned
     return ir_pruned
@@ -175,7 +175,7 @@ def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3):
     
     return smoothed_spectrum
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db, debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -186,20 +186,17 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
         impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
         ir = np.mean(impulseResponses, axis=0) #time domain
     else:
-        ir = np.array(impulseResponses)
+        ir = np.array(impulseResponses, dtype=np.float32)
         ir = ir.reshape((ir.shape[1],))
-
-    sample_rate = sampleRate
     
     componentIRDeg = np.zeros_like(componentIRFreqs)
-    ir_component, angle, system_angle = splitter(ir, componentIRFreqs, componentIRGains, componentIRDeg, sample_rate)
+    ir_component, angle, system_angle = splitter(ir, componentIRFreqs, componentIRGains, componentIRDeg, sampleRate)
 
     #have my IR here, subtract the microphone/louadspeaker ir from this?
-    inverse_response_component, scale, _ = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sample_rate)
-    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir_component,iir_length,sample_rate)
+    inverse_response_component = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sampleRate)
+    inverse_response_no_bandpass = calculateInverseIRNoFilter(ir_component,iir_length,sampleRate)
 
-    mls = np.array(mls)
-    orig_mls = mls
+    mls = np.array(mls, dtype=np.float32)
 
     ####cheap transducer trello
     #Convolve three periods of MLS with IIR. Retain only the middle period.
@@ -217,9 +214,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     half_spectrum = fft_magnitude[:len(fft_result) // 2]
     n = len(middle_period_convolution)
 
-    power_spectrum = fft_magnitude**2
-
-    frequencies = np.fft.fftfreq(n,d=1/sample_rate)
+    frequencies = np.fft.fftfreq(n,d=1/sampleRate)
     frequencies = frequencies[:len(frequencies) // 2]
 
     pcum = np.cumsum(half_spectrum)
@@ -266,57 +261,25 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
 
     ####apply lowpass filter
-    inverse_response_component, _, _ = calculateInverseIR(ir_component,lowHz,fMaxHz,iir_length, sample_rate)
+    inverse_response_component = calculateInverseIR(ir_component,lowHz,fMaxHz,iir_length, sampleRate)
 
     #########
-    N = 1 + math.ceil(len(inverse_response_component)/len(mls))
-    print('N: ' + str(N))
-    mls = np.tile(mls,N)
-    print('length of tiled mls: ' + str(len(mls)))
-    print('length of inverse_response: ' + str(len(inverse_response_component)))
-    convolution = lfilter(inverse_response_component,1,mls)
-    convolution_no_bandpass = lfilter(inverse_response_no_bandpass,1,mls)
-    print('length of original convolution: ' + str(len(convolution)))
-
-    trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
-    convolution_div = trimmed_convolution * mls_amplitude
-    trimmed_convolution_no_bandpass = convolution_no_bandpass[(len(orig_mls)*(N-1)):]
-    convolution_div_no_bandpass = trimmed_convolution_no_bandpass * mls_amplitude
-    print("ATTENUATION gain")
-    print(attenuatorGain_dB)
-    print("fMaxHz")
-    print(fMaxHz)
-    if (attenuatorGain_dB != 0):
-        convolution_div = convolution_div * (10**(attenuatorGain_dB/20))
-        convolution_div_no_bandpass = convolution_div_no_bandpass * (10**(attenuatorGain_dB/20))
-    print('length of convolution: ' + str(len(trimmed_convolution)))
-    print(len(trimmed_convolution))
-
-
-    maximum = max(convolution_div)
-    minimum = min(convolution_div)
-    print("Max value component convolution: " + str(maximum))
-    print("Min value component convolution: " + str(minimum))
-
     ir_pruned = prune_ir(ir_component, irLength)
-    num_samples = len(ir_pruned)
-    frequencies = fftfreq(num_samples,1/sample_rate)
+    frequencies = fftfreq(irLength,1/sampleRate)
     ir_fft = fft(ir_pruned)
     component_angle = np.angle(ir_fft,deg=True)
-    component_angle = component_angle[:num_samples//2]
-    #angle = angle[:len(angle)//2]
-    #system_angle = system_angle[:len(system_angle)//2]
+    component_angle = component_angle[:irLength//2]
     return_ir = ir_fft[:len(ir_fft)//2]
-    ## DELETE: return_ir = 20*np.log10(abs(return_ir))
+
     power = abs(return_ir)**2
     power = smooth_spectrum(power, calibrateSoundSmoothOctaves)
     smoothed_return_ir = np.sqrt(power)
     smoothed_return_ir = 20*np.log10(abs(smoothed_return_ir))
     return_ir = 20*np.log10(abs(return_ir))
     return_freq = frequencies[:len(frequencies)//2]
-    return inverse_response_component.tolist(), convolution_div.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz, convolution_div_no_bandpass.tolist()
+    return inverse_response_component.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, num_periods, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, debug=False):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -329,14 +292,12 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     else:
         ir = np.array(impulseResponses)
         ir = ir.reshape((ir.shape[1],))
-    inverse_response, scale, ir_pruned = calculateInverseIR(ir,lowHz,highHz, iir_length,sampleRate)
-    inverse_response_no_bandpass, _, _ = calculateInverseIRNoFilter(ir,iir_length,sampleRate)
-    # mls = list(mls.values())
+    inverse_response= calculateInverseIR(ir,lowHz,highHz, iir_length,sampleRate)
+    inverse_response_no_bandpass = calculateInverseIRNoFilter(ir,iir_length,sampleRate)
+
     mls = np.array(mls)
-    orig_mls = mls
     ####cheap transducer trello
     #Convolve three periods of MLS with IIR. Retain only the middle period.
-    sample_rate=sampleRate
     three_mls_periods = np.tile(mls,3)
     three_mls_periods_convolution = lfilter(inverse_response,1,three_mls_periods)
     period_length = len(mls)
@@ -351,9 +312,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     half_spectrum = fft_magnitude[:len(fft_result) // 2]
     n = len(middle_period_convolution)
 
-    power_spectrum = fft_magnitude**2
-
-    frequencies = np.fft.fftfreq(n,d=1/sample_rate)
+    frequencies = np.fft.fftfreq(n,d=1/sampleRate)
     frequencies = frequencies[:len(frequencies) // 2]
 
     pcum = np.cumsum(half_spectrum)
@@ -396,12 +355,14 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     else:
         fMaxHz = highHz
         attenuatorGain_dB = 0
-
-
     ####apply lowpass filter
-    inverse_response, _, _ = calculateInverseIR(ir,lowHz,fMaxHz,iir_length, sample_rate)
+    inverse_response= calculateInverseIR(ir,lowHz,fMaxHz,iir_length, sampleRate)
 
-    ######new method
+    return inverse_response.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist(), attenuatorGain_dB, fMaxHz
+
+def run_convolution_task(inverse_response, mls, inverse_response_no_bandpass, attenuatorGain_dB, mls_amplitude):
+     
+    orig_mls = mls
     N = 1 + math.ceil(len(inverse_response)/len(mls))
     print('N: ' + str(N))
     mls = np.tile(mls,N)
@@ -409,55 +370,20 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     print('length of inverse_response: ' + str(len(inverse_response)))
     convolution = lfilter(inverse_response,1,mls)
     convolution_no_bandpass = lfilter(inverse_response_no_bandpass,1,mls)
-    #convolution = np.convolve(inverse_response,mls)
-    #print('length of original convolution: ' + str(len(convolution)))
-   # start_index = (N-1)*len(orig_mls)
-    #print('start index: ' + str(start_index))
-    #end_index = -len(inverse_response)
-    #print('end index: ' + str(end_index))
-    #trimmed_convolution = convolution[start_index:end_index]
+
     print('length of original convolution: ' + str(len(convolution)))
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
     trimmed_convolution_no_bandpass = convolution_no_bandpass[(len(orig_mls)*(N-1)):]
     convolution_div = trimmed_convolution * mls_amplitude #really amplitude
     convolution_div_no_bandpass = trimmed_convolution_no_bandpass * mls_amplitude
-    print("ATTENUATION gain")
-    print(attenuatorGain_dB)
-    print("fMaxHz")
-    print(fMaxHz)
+    print("ATTENUATION gain: ", attenuatorGain_dB)
     if (attenuatorGain_dB != 0):
         convolution_div = convolution_div * (10**(attenuatorGain_dB/20))
         convolution_div_no_bandpass = convolution_div_no_bandpass * (10**(attenuatorGain_dB/20))
     print('length of convolution: ' + str(len(trimmed_convolution)))
-    print(len(trimmed_convolution))
 
     maximum = max(convolution_div)
     minimum = min(convolution_div)
     print("Max value convolution: " + str(maximum))
     print("Min value convolution: " + str(minimum))
-    #########
-
-    ##########old method 
-    # mls= np.tile(mls, num_periods)
-    # mls_pad = np.pad(mls, (0, iir_length), 'constant')
-    # convolution = lfilter(inverse_response,1,mls_pad)
-
-    # print("Max convolution")
-    # maximum = max(convolution)
-    # print(maximum)
-    # minimum = abs(min(convolution))
-    # print("Min convolution")
-    # print(minimum)
-    # print("Root mean squared of convolution")
-    # rms = np.sqrt(np.mean(np.square(convolution)))
-    # print(rms)
-    # divisor = 0
-    # if maximum > minimum:
-    #     divisor = maximum
-    # else:
-    #     divisor = minimum
-
-    # convolution_div = convolution
-    #############
-
-    return inverse_response.tolist(), convolution_div.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist(), attenuatorGain_dB, fMaxHz, convolution_div_no_bandpass.tolist()
+    return convolution_div.tolist(), convolution_div_no_bandpass.tolist()

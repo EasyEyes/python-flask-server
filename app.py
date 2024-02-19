@@ -1,6 +1,6 @@
 import os
 import tracemalloc
-
+import gc
 import psutil
 
 import matplotlib.pyplot as plt
@@ -9,12 +9,13 @@ import matplotlib.pyplot as plt
 import time
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
-from impulse_response import run_ir_task
-from inverted_impulse_response import run_component_iir_task, run_system_iir_task
+from impulse_response import run_ir_task, estimate_samples_per_mls_, adjust_mls_length, compute_impulse_resp
+from inverted_impulse_response import run_component_iir_task, run_system_iir_task, run_convolution_task
 from volume import run_volume_task,run_volume_task_nonlinear
 from volume import get_model_parameters
 import numpy as np
 from scipy.signal import max_len_seq
+from scipy.fft import fft
 from utils import allHzPowerCheck, volumePowerCheck
 import math
 
@@ -24,36 +25,69 @@ CORS(app, resources = {r"/*": {"origins": "*"}})
 process = psutil.Process(os.getpid())
 tracemalloc.start()
 
-def handle_impulse_response_task(request_json, task):
-    start_time = time.time()
+def handle_autocorrelation_task(request_json, task):
     if "payload" not in request_json:
         return 400, "Request Body is missing a 'payload' entry"
     if "sample-rate" not in request_json:
         return 400, "Request Body us missing a 'sample-rate' entry"
-    if "P" not in request_json:
-        return 400, "Request Body us missing a 'P' entry"
     if "mls" not in request_json:
         return 400, "Request Body is missing a 'mls' entry"
     if "numPeriods" not in request_json:
         return 400, "Request Body is missing a 'numPeriods' entry"
-    
-    recordedSignalsJson = request_json["payload"]
+    sig = request_json["payload"]
     mls = request_json["mls"]
     sampleRate = request_json["sample-rate"]
-    P = request_json["P"]
+    NUM_PERIODS = int(request_json["numPeriods"]) - 1
+    print("number of period ", NUM_PERIODS)
+    sig = np.array(sig, dtype=np.float32)
+    MLS = fft(np.array(mls, dtype=np.float32))
+    L = len(MLS)
+    fs2, L_new_n, dL_n, autocorrelation = estimate_samples_per_mls_(sig, NUM_PERIODS, sampleRate, L)
+    print_memory_usage()
+    gc.collect()
+    return 200, {
+        str(task): {
+            'autocorrelation': autocorrelation.tolist(),
+            'fs2': fs2.tolist(),
+            "L_new_n": L_new_n.tolist(), 
+            "dL_n": dL_n.tolist()
+        }
+    }
+
+def handle_impulse_response_task(request_json, task):
+    start_time = time.time()
+    if "sample-rate" not in request_json:
+        return 400, "Request Body us missing a 'sample-rate' entry"
+    if "mls" not in request_json:
+        return 400, "Request Body is missing a 'mls' entry"
+    if "numPeriods" not in request_json:
+        return 400, "Request Body is missing a 'numPeriods' entry"
+    if "L_new_n" not in request_json:
+        return 400, "Request Body is missing a 'L_new_n' entry"
+    if "dL_n" not in request_json:
+        return 400, "Request Body is missing a 'dL_n' entry"
+    if "sig" not in request_json:
+        return 400, "Request Body is missing a 'sig' entry"
+    if "fs2" not in request_json:
+        return 400, "Request Body is missing a 'fs2' entry"
+    MLS = fft(np.array(request_json['mls'], dtype=np.float32))
+    L = len(MLS)
+    sig = np.array(request_json["sig"], dtype=np.float32)
+    L_new_n = request_json["L_new_n"]
+    dL_n = request_json["dL_n"]
     NUM_PERIODS = request_json["numPeriods"]
-    NUM_PERIODS = int(NUM_PERIODS)
+    fs2 = request_json["fs2"]
+    NUM_PERIODS = int(NUM_PERIODS) - 1
     print("Starting IR Task")
-    ir, autocorrelation, L_new_n, fs2 = run_ir_task(mls,recordedSignalsJson, P, sampleRate,NUM_PERIODS)
+    OUT_MLS2_n = adjust_mls_length(sig, NUM_PERIODS, L, L_new_n, dL_n)
+    ir = compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2, NUM_PERIODS)
+    print_memory_usage()
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== handle_impulse_response task, time taken: {elapsed_time}s ==============")
     return 200, {
         str(task): {
-            'ir':ir,
-            'autocorrelation': autocorrelation,
-            'L_new_n': L_new_n,
-            'fs2': fs2
+            'ir':ir.tolist()
         }
     }
 
@@ -65,6 +99,8 @@ def handle_all_hz_power_check_task(request_json, task):
     burstSec = request_json["burstSec"]
     repeats = request_json["repeats"]
     warmupT, warmupDb, recT, recDb, sd, postT, postDb  = allHzPowerCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec,repeats)
+    print_memory_usage()
+    gc.collect()
     return 200, {
         str(task): {
             'sd':sd,
@@ -113,8 +149,6 @@ def handle_component_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'sampleRate'"
     if "iirLength" not in request_json:
         return 400, "Request body is missing a 'iirLength'"
-    if "num_periods" not in request_json:
-        return 400, "Request body is missing a 'num_periods'"
     if "mlsAmplitude" not in request_json:
         return 400, "Request body is missing a 'mlsAmplitude'"
     if "irLength" not in request_json:
@@ -132,19 +166,18 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     componentIRGains = request_json["componentIRGains"]
     componentIRFreqs = request_json["componentIRFreqs"]
     sampleRate = request_json["sampleRate"]
-    num_periods = request_json["num_periods"]
     mls_amplitude = request_json["mlsAmplitude"]
     irLength = request_json["irLength"]
     calibrateSoundSmoothOctaves = request_json["calibrateSoundSmoothOctaves"]
     calibrate_sound_burst_filtered_extra_db = request_json["calibrateSoundBurstFilteredExtraDb"]
-    result, convolution, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz, convolution_no_bandpass = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,num_periods,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db)
+    result, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db)
+    print_memory_usage()
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== component_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
     return 200, {
         str(task): {
                         "iir":result,
-                        "convolution":convolution,
                         "ir":ir,
                         "frequencies":frequencies,
                         "iirNoBandpass":iir_no_bandpass,
@@ -153,8 +186,7 @@ def handle_component_inverse_impulse_response_task(request_json, task):
                         "system_angle":system_angle,
                         "irOrigin": ir_origin,
                         "attenuatorGain_dB":attenuatorGain_dB,
-                        "fMaxHz":fMaxHz,
-                        "convolutionNoBandpass":convolution_no_bandpass
+                        "fMaxHz":fMaxHz
                     }
     }
 
@@ -172,38 +204,57 @@ def handle_system_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'sampleRate'"
     if "iirLength" not in request_json:
         return 400, "Request body is missing a 'iirLength'"
-    if "num_periods" not in request_json:
-        return 400, "Request body is missing a 'num_periods'"
     if "calibrateSoundBurstFilteredExtraDb" not in request_json:
         return 400, "Request body is missing a 'calibrateSoundBurstFilteredExtraDb'"
-
     impulseResponsesJson = request_json["payload"]
     iir_length = request_json["iirLength"]
     mls = request_json["mls"]
     lowHz = request_json["lowHz"]
     highHz = request_json["highHz"]
     sampleRate = request_json["sampleRate"]
-    num_periods = request_json["num_periods"]
     mls_amplitude = request_json["mlsAmplitude"]
     calibrate_sound_burst_filtered_extra_db = request_json["calibrateSoundBurstFilteredExtraDb"]
-    result, convolution, ir, iir_no_bandpass, attenuatorGain_dB, fMaxHz, convolution_no_bandpass = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,num_periods,sampleRate, mls_amplitude,calibrate_sound_burst_filtered_extra_db)
+    result, ir, iir_no_bandpass, attenuatorGain_dB, fMaxHz = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,sampleRate, mls_amplitude,calibrate_sound_burst_filtered_extra_db)
+    print_memory_usage()
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"============== system_inverse_impulse_response task, time taken: {elapsed_time}s ==============")
     return 200, {
         str(task): {
                         "iir":result,
-                        "convolution":convolution,
                         "ir":ir,
                         "iirNoBandpass":iir_no_bandpass,
                         "attenuatorGain_dB":attenuatorGain_dB,
-                        "fMaxHz":fMaxHz,
-                        "convolutionNoBandpass":convolution_no_bandpass
+                        "fMaxHz":fMaxHz
                     }
     }
 
+def handle_convolution_task(request_json, task):
+     if "mls" not in request_json:
+         return 400, "Request Body is missing a 'mls' entry"
+     if "inverse_response" not in request_json:
+         return 400, "Request body is missing a 'inverse_response'"
+     if "inverse_response_no_bandpass" not in request_json:
+         return 400, "Request body is missing a 'inverse_response_no_bandpass'"
+     if "attenuatorGain_dB" not in request_json:
+         return 400, "Request body is missing a 'attenuatorGain_dB'"
+     if "mls_amplitude" not in request_json:
+         return 400, "Request body is missing a 'mls_amplitude'"
+     mls = request_json['mls']
+     inverse_response = request_json['inverse_response']
+     inverse_response_no_bandpass = request_json['inverse_response_no_bandpass']
+     attenuatorGain_dB = request_json['attenuatorGain_dB']
+     mls_amplitude = request_json['mls_amplitude']
+     conv, conv_nbp = run_convolution_task(inverse_response, mls, inverse_response_no_bandpass, attenuatorGain_dB, mls_amplitude)
+     gc.collect()
+     return 200, {
+         str(task): {
+             'convolution': conv,
+             'convolution_no_bandpass': conv_nbp
+             }
+             }
+
 def handle_volume_task(request_json, task):
-    start_time = time.time()
     if "payload" not in request_json:
         return 400, "Request Body is missing a 'payload' entry"
     if "sample-rate" not in request_json:
@@ -362,10 +413,12 @@ def handle_subtracted_psd_task(request_json,task):
 
 SUPPORTED_TASKS = {
     'impulse-response': handle_impulse_response_task,
+    'autocorrelation': handle_autocorrelation_task,
     'all-hz-check': handle_all_hz_power_check_task,
     'volume-check': handle_volume_power_check_task,
     'component-inverse-impulse-response': handle_component_inverse_impulse_response_task,
     'system-inverse-impulse-response': handle_system_inverse_impulse_response_task,
+    'convolution': handle_convolution_task,
     'volume': handle_volume_task_nonlinear,
     'volume-parameters': handle_volume_parameters,
     'psd': handle_psd_task,
@@ -375,26 +428,32 @@ SUPPORTED_TASKS = {
     'mls-psd': handle_mls_psd_task
 }
 
+def print_memory_usage():
+    print("memory used:", round(process.memory_info().rss / 1024 ** 2), "mb")
+
 @app.route("/task/<string:task>", methods=['POST'])
 @cross_origin()
 def task_handler(task):
+    print_memory_usage()
+    gc.collect()
     if task not in SUPPORTED_TASKS:
         return 'ERROR'
     content_type = request.headers.get('Content-Type')
     if (content_type == 'application/json'):
-        json = request.get_json()
         headers = {"Content-Type": "application/json"}
-        status, result = SUPPORTED_TASKS[task](json, task)
+        status, result = SUPPORTED_TASKS[task](request.get_json(cache=False), task)
+        request.data
         resp = make_response(result, status)
         resp.headers = headers
+        print_memory_usage()
         return resp
     else:
         return 'Content-Type not supported'
     
-@app.route('/memory')
+@app.route('/memory', methods=['POST'])
 @cross_origin()
 def print_memory():
-    return {'memory': process.memory_info().rss}    
+    return {'memory': process.memory_info().rss / 1024 ** 2}    
 
 @app.route("/snapshot")
 @cross_origin()
