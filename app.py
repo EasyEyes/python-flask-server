@@ -373,20 +373,28 @@ def handle_mls_psd_task(request_json,task):
 def handle_mls_task(request_json,task):
     start_time = time.time()
     #length of mls will be 2**nbits - 1
+    calibrateSoundBurstMLSVersions = int(request_json['calibrateSoundBurstMLSVersions'])
     desired_length = request_json["length"]
     amplitude = request_json["amplitude"]
+    mls_transformed = []
+    scaled_mls_transformed = []
     nbits = math.ceil(math.log(desired_length + 1, 2))
-    ret_arr = max_len_seq(nbits,length=desired_length)
+    ret_arr = max_len_seq(nbits,length=desired_length*calibrateSoundBurstMLSVersions)
     mls = ret_arr[0]
-    mls_transformed = np.where(mls == 0, -1, 1)
-    scaled_mls_transformed = mls_transformed * amplitude
+    for i in range(calibrateSoundBurstMLSVersions):
+         print(i)
+         mls_transformed.append((np.where(mls == 0, -1, 1)[i*desired_length:(i+1)*desired_length]).tolist())
+         scaled_mls_transformed.append(
+             (np.where(mls == 0, -1, 1)[i*desired_length:(i+1)*desired_length]*amplitude).tolist())
+         print(mls_transformed[i] == mls_transformed[0])
+         print(len(mls_transformed[i]))
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"================ handle_mls task, time taken: {elapsed_time}s ================")
     return 200, {
         str(task):{
-            "mls": scaled_mls_transformed.tolist(),
-            "unscaledMLS": mls_transformed.tolist()
+            "mls": scaled_mls_transformed,
+            "unscaledMLS": mls_transformed
         }
     }
 

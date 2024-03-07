@@ -184,7 +184,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
             if len(ir) < smallest:
                 smallest = len(ir)
         impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
-        ir = np.mean(impulseResponses, axis=0) #time domain
+        ir = np.median(impulseResponses, axis=0)
     else:
         ir = np.array(impulseResponses, dtype=np.float32)
         ir = ir.reshape((ir.shape[1],))
@@ -283,12 +283,13 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
+    print('number of impulse response:', len(impulseResponses))
     if (len(impulseResponses) > 1):
         for ir in impulseResponses:
             if len(ir) < smallest:
                 smallest = len(ir)
         impulseResponses[:] = (ir[:smallest] for ir in impulseResponses)
-        ir = np.mean(impulseResponses, axis=0)
+        ir = np.median(impulseResponses, axis=0)
     else:
         ir = np.array(impulseResponses)
         ir = ir.reshape((ir.shape[1],))
