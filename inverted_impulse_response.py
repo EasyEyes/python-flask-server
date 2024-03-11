@@ -78,7 +78,7 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, targetHz=1000):
     inverse_ir = inverse_ir/scale_value
     return inverse_ir
 
-def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000, componentIRFreqs = None, componentIRGains = None):
+def calculateInverseIRNoFilter(original_ir, _calibrateSoundIIRPhase, iir_length=500, fs = 96000, componentIRFreqs = None, componentIRGains = None):
 
     L = iir_length
     # center original IR and prune it to L samples
@@ -94,14 +94,17 @@ def calculateInverseIRNoFilter(original_ir, iir_length=500, fs = 96000, componen
     H = np.abs(fft(ir_pruned))
         
     iH = np.conj(H)/(np.conj(H)*H)
-    iH = np.square(iH)
+    if _calibrateSoundIIRPhase == 'minimum':
+        iH = np.square(iH)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
-    #inverse_ir = smoothing_win * inverse_ir
-    inverse_ir = scaleInverseResponse(inverse_ir,iH,fs)
-    inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
-    return inverse_ir_min
+    if _calibrateSoundIIRPhase == 'minimum':
+        print('calculate inverse impulse response with minimum phase')
+        inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
+        return inverse_ir_min
+    else:
+        return inverse_ir
 
-def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
+def calculateInverseIR(original_ir, lowHz, highHz, _calibrateSoundIIRPhase, iir_length=500, fs = 96000):
 
     L = iir_length
     # center original IR and prune it to L samples
@@ -116,14 +119,20 @@ def calculateInverseIR(original_ir, lowHz, highHz, iir_length=500, fs = 96000):
     nfft = L
     H = np.abs(fft(ir_pruned))
     iH = np.conj(H)/(np.conj(H)*H)
-    iH = np.square(iH)
+    if _calibrateSoundIIRPhase == 'minimum':
+        iH = np.square(iH)
     limit_ranges = [lowHz, highHz] #was 100 and 16000
     iH = limitInverseResponseBandwidth(iH, fs, limit_ranges)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
     #inverse_ir = smoothing_win * inverse_ir
     inverse_ir = scaleInverseResponse(inverse_ir,iH,fs)
-    inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
-    return inverse_ir_min
+    if _calibrateSoundIIRPhase == 'minimum':
+        print('calculate inverse impulse response with minimum phase')
+        inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
+        return inverse_ir_min
+    else:
+        return inverse_ir
+    
 
 def splitter(system_ir,partIRHz,partIRDb,partIRDeg,fs=48000):
   systemSpectrum = fft(system_ir)
@@ -175,7 +184,7 @@ def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3):
     
     return smoothed_spectrum
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db, debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -193,8 +202,8 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     ir_component, angle, system_angle = splitter(ir, componentIRFreqs, componentIRGains, componentIRDeg, sampleRate)
 
     #have my IR here, subtract the microphone/louadspeaker ir from this?
-    inverse_response_component = calculateInverseIR(ir_component,lowHz,highHz,iir_length, sampleRate)
-    inverse_response_no_bandpass = calculateInverseIRNoFilter(ir_component,iir_length,sampleRate)
+    inverse_response_component = calculateInverseIR(ir_component,lowHz,highHz,_calibrateSoundIIRPhase,iir_length, sampleRate)
+    inverse_response_no_bandpass = calculateInverseIRNoFilter(ir_component,_calibrateSoundIIRPhase,iir_length,sampleRate)
 
     mls = np.array(mls, dtype=np.float32)
 
@@ -261,7 +270,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
 
     ####apply lowpass filter
-    inverse_response_component = calculateInverseIR(ir_component,lowHz,fMaxHz,iir_length, sampleRate)
+    inverse_response_component = calculateInverseIR(ir_component,lowHz,fMaxHz,_calibrateSoundIIRPhase,iir_length, sampleRate)
 
     #########
     ir_pruned = prune_ir(ir_component, irLength)
@@ -279,7 +288,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     return_freq = frequencies[:len(frequencies)//2]
     return inverse_response_component.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_component.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, debug=False):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -293,8 +302,8 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     else:
         ir = np.array(impulseResponses)
         ir = ir.reshape((ir.shape[1],))
-    inverse_response= calculateInverseIR(ir,lowHz,highHz, iir_length,sampleRate)
-    inverse_response_no_bandpass = calculateInverseIRNoFilter(ir,iir_length,sampleRate)
+    inverse_response= calculateInverseIR(ir,lowHz,highHz, _calibrateSoundIIRPhase,iir_length,sampleRate)
+    inverse_response_no_bandpass = calculateInverseIRNoFilter(ir,_calibrateSoundIIRPhase, iir_length,sampleRate)
 
     mls = np.array(mls)
     ####cheap transducer trello
@@ -357,7 +366,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
         fMaxHz = highHz
         attenuatorGain_dB = 0
     ####apply lowpass filter
-    inverse_response= calculateInverseIR(ir,lowHz,fMaxHz,iir_length, sampleRate)
+    inverse_response= calculateInverseIR(ir,lowHz,fMaxHz,_calibrateSoundIIRPhase,iir_length, sampleRate)
 
     return inverse_response.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist(), attenuatorGain_dB, fMaxHz
 

@@ -170,7 +170,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     irLength = request_json["irLength"]
     calibrateSoundSmoothOctaves = request_json["calibrateSoundSmoothOctaves"]
     calibrate_sound_burst_filtered_extra_db = request_json["calibrateSoundBurstFilteredExtraDb"]
-    result, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db)
+    _calibrateSoundIIRPhase = request_json["calibrateSoundIIRPhase"]
+    result, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase)
     print_memory_usage()
     end_time = time.time()
     elapsed_time = end_time - start_time
@@ -214,7 +215,8 @@ def handle_system_inverse_impulse_response_task(request_json, task):
     sampleRate = request_json["sampleRate"]
     mls_amplitude = request_json["mlsAmplitude"]
     calibrate_sound_burst_filtered_extra_db = request_json["calibrateSoundBurstFilteredExtraDb"]
-    result, ir, iir_no_bandpass, attenuatorGain_dB, fMaxHz = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,sampleRate, mls_amplitude,calibrate_sound_burst_filtered_extra_db)
+    _calibrateSoundIIRPhase = request_json["calibrateSoundIIRPhase"]
+    result, ir, iir_no_bandpass, attenuatorGain_dB, fMaxHz = run_system_iir_task(impulseResponsesJson,mls,lowHz,iir_length,highHz,sampleRate, mls_amplitude,calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase)
     print_memory_usage()
     end_time = time.time()
     elapsed_time = end_time - start_time
