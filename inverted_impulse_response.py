@@ -155,6 +155,7 @@ def splitter(system_ir,partIRHz,partIRDb,partIRDeg,fs=48000):
   return other_ir, otherDeg, systemDeg
 
 def prune_ir(original_ir, irLength):
+    print('irLength:', irLength)
     L = irLength
     nfft = len(original_ir)
     H = np.abs(fft(original_ir))
