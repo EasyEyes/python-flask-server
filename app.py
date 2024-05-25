@@ -2,6 +2,7 @@ import os
 import tracemalloc
 import gc
 import psutil
+import json
 
 import matplotlib.pyplot as plt
 # import matplotlib
@@ -478,6 +479,14 @@ def snap():
         for stat in top_stats[:5]:
             lines.append(str(stat))
         return "\n".join(lines)
+    
+@app.route("/model/faceDetect")
+@cross_origin()
+def face_detect():
+    # load and return the JSON File: mediapipe_tfjs_model_face_detection_full.json
+    with open('mediapipe_tfjs_model_face_detection_full.json') as f:
+        data = json.load(f)
+    return data
 
 if __name__ == '__main__':
     app.run()
