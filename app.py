@@ -27,7 +27,7 @@ CORS(app, resources = {r"/*": {"origins": "*"}})
 process = psutil.Process(os.getpid())
 tracemalloc.start()
 
-SHORT_IO_API_URL = 'https://api.short.io/links'
+SHORT_IO_API_URL = 'https://api.short.io/links/public'
 API_KEY = 'pk_eypKqyQMNIe4DWS1'  # Keep this secure
 
 def shorten_url(request_json,task):
