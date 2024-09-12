@@ -28,7 +28,7 @@ process = psutil.Process(os.getpid())
 tracemalloc.start()
 
 SHORT_IO_API_URL = 'https://api.short.io/links'
-API_KEY = 'sk_7Y58e7P68nyqOQ0J'  # Keep this secure
+API_KEY = 'pk_eypKqyQMNIe4DWS1'  # Keep this secure
 
 def shorten_url(request_json,task):
     headers = {
