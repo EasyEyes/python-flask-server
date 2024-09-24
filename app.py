@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 # import matplotlib
 # matplotlib.use("Agg")
 import time
-import requests
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task, estimate_samples_per_mls_, adjust_mls_length, compute_impulse_resp
@@ -27,30 +26,6 @@ CORS(app, resources = {r"/*": {"origins": "*"}})
 process = psutil.Process(os.getpid())
 tracemalloc.start()
 
-SHORT_IO_API_URL = 'https://api.short.io/links/public'
-API_KEY = 'pk_eypKqyQMNIe4DWS1'  # Keep this secure
-
-def shorten_url(request_json,task):
-    headers = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': API_KEY
-    }
-    payload = {
-        'domain': 'listeners.link',
-        'originalURL': request_json['URL']
-    }
-
-    try:
-        # Make the request to Short.io
-        response = requests.post(SHORT_IO_API_URL, json=payload, headers=headers)
-        return 200, {
-        str(task): response.json()
-    } # Forward the JSON response to the frontend
-    except requests.RequestException as e:
-        # Return an error response if something goes wrong
-        print({'error': str(e)})
-        return 500, str(e)
 
 def handle_autocorrelation_task(request_json, task):
     if "payload" not in request_json:
@@ -462,8 +437,7 @@ SUPPORTED_TASKS = {
     'subtracted-psd':handle_subtracted_psd_task,
     'mls':handle_mls_task,
     'background-psd': handle_background_psd_task,
-    'mls-psd': handle_mls_psd_task,
-    'url': shorten_url
+    'mls-psd': handle_mls_psd_task
 }
 
 def print_memory_usage():

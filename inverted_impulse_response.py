@@ -171,7 +171,7 @@ def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3):
     
     # Compute the ratio r
     r = 2 ** (_calibrateSoundSmoothOctaves / 2)
-    
+    print("r", r)
     smoothed_spectrum = np.zeros_like(spectrum)
     
     # Loop through the spectrum and apply smoothing
@@ -287,6 +287,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     smoothed_return_ir = 20*np.log10(abs(smoothed_return_ir))
     return_ir = 20*np.log10(abs(return_ir))
     return_freq = frequencies[:len(frequencies)//2]
+    print("return_freq",return_freq)
     return inverse_response_component.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_pruned.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False):
