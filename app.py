@@ -157,6 +157,8 @@ def handle_component_inverse_impulse_response_task(request_json, task):
         return 400, "Request body is missing a 'irLength'"
     if "calibrateSoundSmoothOctaves" not in request_json:
         return 400, "Request body is missing a 'calibrateSoundSmoothOctaves'"
+    if "calibrateSoundSmoothMinBandwidthHz" not in request_json:
+        return 400, "Request body is missing a 'calibrateSoundSmoothMinBandwidthHz'"
     if "calibrateSoundBurstFilteredExtraDb" not in request_json:
         return 400, "Request body is missing a 'calibrateSoundBurstFilteredExtraDb'"
     start_time = time.time()
@@ -171,9 +173,10 @@ def handle_component_inverse_impulse_response_task(request_json, task):
     mls_amplitude = request_json["mlsAmplitude"]
     irLength = request_json["irLength"]
     calibrateSoundSmoothOctaves = request_json["calibrateSoundSmoothOctaves"]
+    calibrateSoundSmoothMinBandwidthHz = request_json["calibrateSoundSmoothMinBandwidthHz"]
     calibrate_sound_burst_filtered_extra_db = request_json["calibrateSoundBurstFilteredExtraDb"]
     _calibrateSoundIIRPhase = request_json["calibrateSoundIIRPhase"]
-    result, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase)
+    result, ir,frequencies, iir_no_bandpass, ir_time, angle, ir_origin, system_angle, attenuatorGain_dB, fMaxHz = run_component_iir_task(impulseResponsesJson,mls,lowHz,highHz,iir_length,componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves,calibrateSoundSmoothMinBandwidthHz, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase)
     print_memory_usage()
     end_time = time.time()
     elapsed_time = end_time - start_time

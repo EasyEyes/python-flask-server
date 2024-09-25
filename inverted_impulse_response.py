@@ -165,7 +165,7 @@ def prune_ir(original_ir, irLength):
     ir_pruned = smoothing_win * ir_pruned
     return ir_pruned
 
-def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3):
+def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3,_calibrateSoundSmoothMinBandwidthHz = 200):
     if _calibrateSoundSmoothOctaves == 0:
         return spectrum
     
@@ -179,13 +179,16 @@ def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3):
         # Compute the window indices for averaging
         start_idx = int(max(0, i / r))
         end_idx = int(min(len(spectrum) - 1, i * r))
+        bandwidth = (end_idx - start_idx) * 5
+        if bandwidth < _calibrateSoundSmoothMinBandwidthHz:
+            end_idx = int(min(len(spectrum) - 1, start_idx + _calibrateSoundSmoothMinBandwidthHz / 5))
         
         # Average the points within the window
         smoothed_spectrum[i] = np.mean(spectrum[start_idx:end_idx + 1])
     
     return smoothed_spectrum
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrateSoundSmoothMinBandwidthHz,calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -282,12 +285,11 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     return_ir = ir_fft[:len(ir_fft)//2]
 
     power = abs(return_ir)**2
-    power = smooth_spectrum(power, calibrateSoundSmoothOctaves)
+    power = smooth_spectrum(power, calibrateSoundSmoothOctaves, calibrateSoundSmoothMinBandwidthHz)
     smoothed_return_ir = np.sqrt(power)
     smoothed_return_ir = 20*np.log10(abs(smoothed_return_ir))
     return_ir = 20*np.log10(abs(return_ir))
     return_freq = frequencies[:len(frequencies)//2]
-    print("return_freq",return_freq)
     return inverse_response_component.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_pruned.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz
 
 def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False):
