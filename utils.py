@@ -172,7 +172,7 @@ def convolve_wav():
     #plot_frequency_spectrum(waveFile_left_g_filtered, 'g Filtered WAV File')
     #plot_frequency_spectrum(recovered, 'Recovered WAV File')
 
-def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundBurstSec, repeats):
+def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundBurstSec, repeats, warmUp):
     coarseHz = 1 / _calibrateSoundPowerBinDesiredSec 
     print("coarseHz",coarseHz)
     print("fs", fs)
@@ -196,7 +196,7 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
       extremeIndices = [indices[0],indices[-1]]
       coarsePowerDb[i] = 10 * np.log10(np.mean(power[indices]))
       coarseT[i] = np.mean(t[extremeIndices])
-    prepSamples=round(coarseHz * _calibrateSoundBurstSec)
+    prepSamples=round(coarseHz * _calibrateSoundBurstSec*warmUp)
     postSamples=round(coarseHz * _calibrateSoundBurstSec * repeats)
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
     coarseT = np.round(coarseT, 3).tolist()

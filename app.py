@@ -5,8 +5,8 @@ import psutil
 import json
 
 import matplotlib.pyplot as plt
-# import matplotlib
-# matplotlib.use("Agg")
+import matplotlib
+matplotlib.use("Agg")
 import time
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
@@ -39,7 +39,7 @@ def handle_autocorrelation_task(request_json, task):
     sig = request_json["payload"]
     mls = request_json["mls"]
     sampleRate = request_json["sample-rate"]
-    NUM_PERIODS = int(request_json["numPeriods"]) - 1
+    NUM_PERIODS = int(request_json["numPeriods"])
     print("number of period ", NUM_PERIODS)
     sig = np.array(sig, dtype=np.float32)
     MLS = fft(np.array(mls, dtype=np.float32))
@@ -79,7 +79,7 @@ def handle_impulse_response_task(request_json, task):
     dL_n = request_json["dL_n"]
     NUM_PERIODS = request_json["numPeriods"]
     fs2 = request_json["fs2"]
-    NUM_PERIODS = int(NUM_PERIODS) - 1
+    NUM_PERIODS = int(NUM_PERIODS)
     print("Starting IR Task")
     OUT_MLS2_n = adjust_mls_length(sig, NUM_PERIODS, L, L_new_n, dL_n)
     ir = compute_impulse_resp(MLS, OUT_MLS2_n, L, fs2, NUM_PERIODS)
@@ -100,8 +100,8 @@ def handle_all_hz_power_check_task(request_json, task):
     binDesiredSec = request_json["binDesiredSec"]
     burstSec = request_json["burstSec"]
     repeats = request_json["repeats"]
-    # warmUp = request_json["warmUp"] # number of warm up PERIOD
-    warmupT, warmupDb, recT, recDb, sd, postT, postDb  = allHzPowerCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec,repeats)
+    warmUp = request_json["warmUp"] # number of warm up PERIOD
+    warmupT, warmupDb, recT, recDb, sd, postT, postDb  = allHzPowerCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec,repeats, warmUp)
     print_memory_usage()
     gc.collect()
     return 200, {
