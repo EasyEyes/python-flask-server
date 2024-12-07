@@ -5,8 +5,8 @@ import psutil
 import json
 
 import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use("Agg")
+# import matplotlib
+# matplotlib.use("Agg")
 import time
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
@@ -39,7 +39,7 @@ def handle_autocorrelation_task(request_json, task):
     sig = request_json["payload"]
     mls = request_json["mls"]
     sampleRate = request_json["sample-rate"]
-    NUM_PERIODS = int(request_json["numPeriods"])
+    NUM_PERIODS = int(request_json["numPeriods"]) - 1
     print("number of period ", NUM_PERIODS)
     sig = np.array(sig, dtype=np.float32)
     MLS = fft(np.array(mls, dtype=np.float32))
@@ -100,8 +100,8 @@ def handle_all_hz_power_check_task(request_json, task):
     binDesiredSec = request_json["binDesiredSec"]
     burstSec = request_json["burstSec"]
     repeats = request_json["repeats"]
-    warmUp = request_json["warmUp"] # number of warm up PERIOD
-    warmupT, warmupDb, recT, recDb, sd, postT, postDb  = allHzPowerCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec,repeats, warmUp)
+    # warmUp = request_json["warmUp"] # number of warm up PERIOD
+    warmupT, warmupDb, recT, recDb, sd, postT, postDb  = allHzPowerCheck(recordedSignalsJson, sampleRate, binDesiredSec, burstSec,repeats)
     print_memory_usage()
     gc.collect()
     return 200, {
