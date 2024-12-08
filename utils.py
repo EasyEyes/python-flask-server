@@ -203,29 +203,29 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
     coarseT = np.round(coarseT, 3).tolist()
     coarsePowerDb = np.round(coarsePowerDb,3).tolist()
-    start = round(np.interp(_calibrateSoundBurstSec,coarseT,coarsePowerDb),3)
-    end = round(np.interp(_calibrateSoundBurstSec * repeats, coarseT,coarsePowerDb),3)
+    start = round(np.interp(_calibrateSoundBurstSec * warmUp,coarseT,coarsePowerDb),3)
+    end = round(np.interp(_calibrateSoundBurstSec * (repeats + warmUp), coarseT,coarsePowerDb),3)
     warmupT = coarseT[:prepSamples]
     warmupDb = coarsePowerDb[:prepSamples]
     # correct starting point and end point of each period, to make lines connected
-    if warmupT[-1] < _calibrateSoundBurstSec:
-        warmupT = warmupT + [_calibrateSoundBurstSec]
+    if warmupT[-1] < _calibrateSoundBurstSec * warmUp:
+        warmupT = warmupT + [_calibrateSoundBurstSec * warmUp]
         warmupDb = warmupDb + [start]
     recT = coarseT[prepSamples:postSamples]
     recDb = coarsePowerDb[prepSamples:postSamples]
 
-    if recT[0] > float(_calibrateSoundBurstSec):
+    if recT[0] > float(_calibrateSoundBurstSec * warmUp):
         print("need interpolate power")
-        recT = [_calibrateSoundBurstSec] + recT
+        recT = [warmUp * _calibrateSoundBurstSec] + recT
         recDb = [start] + recDb
 
-    if rec[-1] < (_calibrateSoundBurstSec * repeats):
-        recT = recT + [(_calibrateSoundBurstSec * repeats)]
+    if rec[-1] < (_calibrateSoundBurstSec * (warmUp + repeats)):
+        recT = recT + [(_calibrateSoundBurstSec * (warmUp + repeats))]
         recDb = recDb + [end]
     postT = coarseT[postSamples:]
     postDb = coarsePowerDb[postSamples:]
-    if postT[0] > (_calibrateSoundBurstSec * repeats):
-        postT = [(_calibrateSoundBurstSec * repeats)] + coarseT[postSamples:]
+    if postT[0] > (_calibrateSoundBurstSec * (warmUp + repeats)):
+        postT = [(_calibrateSoundBurstSec * (warmUp + repeats))] + coarseT[postSamples:]
         postDb = [end] + coarsePowerDb[postSamples:]
 
     return warmupT, warmupDb, recT, recDb, sdDb, postT, postDb
