@@ -196,15 +196,15 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
       extremeIndices = [indices[0],indices[-1]]
       coarsePowerDb[i] = 10 * np.log10(np.mean(power[indices]))
       coarseT[i] = np.mean(t[extremeIndices])
-    prepSamples=round(coarseHz * _calibrateSoundBurstSec*warmUp)
-    postSamples=round(coarseHz * _calibrateSoundBurstSec * (repeats + warmUp))
+    prepSamples=round(coarseHz *warmUp)
+    postSamples=round(coarseHz * ((_calibrateSoundBurstSec * repeats) + warmUp))
     print('prepSamples',prepSamples)
     print('postSamples',postSamples)
-    sdDb=np.round(np.std(coarsePowerDb[prepSamples:]),1)
+    sdDb=np.round(np.std(coarsePowerDb[prepSamples:postSamples]),1)
     coarseT = np.round(coarseT, 3).tolist()
     coarsePowerDb = np.round(coarsePowerDb,3).tolist()
-    start = round(np.interp(_calibrateSoundBurstSec * warmUp,coarseT,coarsePowerDb),3)
-    end = round(np.interp(_calibrateSoundBurstSec * (repeats + warmUp), coarseT,coarsePowerDb),3)
+    start = round(np.interp(warmUp,coarseT,coarsePowerDb),3)
+    end = round(np.interp((_calibrateSoundBurstSec * repeats) + warmUp, coarseT,coarsePowerDb),3)
     warmupT = coarseT[:prepSamples]
     warmupDb = coarsePowerDb[:prepSamples]
     # correct starting point and end point of each period, to make lines connected
