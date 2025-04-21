@@ -11,7 +11,7 @@ import time
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task, estimate_samples_per_mls_, adjust_mls_length, compute_impulse_resp
-from inverted_impulse_response import run_component_iir_task, run_system_iir_task, run_convolution_task
+from inverted_impulse_response import run_component_iir_task, run_system_iir_task, run_convolution_task, run_ir_convolution_task
 from volume import run_volume_task,run_volume_task_nonlinear
 from volume import get_model_parameters
 import numpy as np
@@ -426,6 +426,25 @@ def handle_subtracted_psd_task(request_json,task):
             }
     }
 
+def handle_ir_convolution_task(request_json, task):
+    if "input_signal" not in request_json:
+        return 400, "Request Body is missing an 'input_signal' entry"
+    if "microphone_ir" not in request_json:
+        return 400, "Request Body is missing a 'microphone_ir' entry"
+    if "loudspeaker_ir" not in request_json:
+        return 400, "Request Body is missing a 'loudspeaker_ir' entry"
+    
+    input_signal = request_json['input_signal']
+    microphone_ir = request_json['microphone_ir']
+    loudspeaker_ir = request_json['loudspeaker_ir']
+    
+    output_signal = run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir)
+    
+    return 200, {
+        str(task): {
+            'output_signal': output_signal
+        }
+    }
 
 SUPPORTED_TASKS = {
     'impulse-response': handle_impulse_response_task,
@@ -435,6 +454,7 @@ SUPPORTED_TASKS = {
     'component-inverse-impulse-response': handle_component_inverse_impulse_response_task,
     'system-inverse-impulse-response': handle_system_inverse_impulse_response_task,
     'convolution': handle_convolution_task,
+    'ir-convolution': handle_ir_convolution_task,
     'volume': handle_volume_task_nonlinear,
     'volume-parameters': handle_volume_parameters,
     'psd': handle_psd_task,

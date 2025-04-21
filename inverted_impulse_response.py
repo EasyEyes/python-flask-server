@@ -2,7 +2,7 @@ import numpy as np
 import math
 from scipy.fft import fft, ifft, irfft, fftfreq
 from pickle import loads
-from scipy.signal import lfilter, butter, minimum_phase
+from scipy.signal import lfilter, butter, minimum_phase, convolve
 from scipy.interpolate import interp1d
 
 def ifft_sym(sig):
@@ -401,3 +401,34 @@ def run_convolution_task(inverse_response, mls, inverse_response_no_bandpass, at
     print("Max value convolution: " + str(maximum))
     print("Min value convolution: " + str(minimum))
     return convolution_div.tolist(), convolution_div_no_bandpass.tolist()
+
+def run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir):
+    """
+    Convolve an input signal with both microphone and loudspeaker impulse responses.
+    
+    Args:
+        input_signal: Input audio signal as numpy array
+        microphone_ir: Microphone impulse response as numpy array
+        loudspeaker_ir: Loudspeaker impulse response as numpy array
+        
+    Returns:
+        The convolved output signal as a list
+    """
+    # Convert to numpy arrays if needed
+    input_signal = np.array(input_signal)
+    microphone_ir = np.array(microphone_ir)
+    loudspeaker_ir = np.array(loudspeaker_ir)
+    
+    # For efficiency, convolve with the shorter IR first
+    if len(microphone_ir) <= len(loudspeaker_ir):
+        # First convolve with microphone IR
+        intermediate_signal = convolve(input_signal, microphone_ir, mode='full')
+        # Then convolve with loudspeaker IR
+        output_signal = convolve(intermediate_signal, loudspeaker_ir, mode='full')
+    else:
+        # First convolve with loudspeaker IR
+        intermediate_signal = convolve(input_signal, loudspeaker_ir, mode='full')
+        # Then convolve with microphone IR
+        output_signal = convolve(intermediate_signal, microphone_ir, mode='full')
+    
+    return output_signal.tolist()
