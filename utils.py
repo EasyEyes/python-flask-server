@@ -208,24 +208,24 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
     warmupT = coarseT[:prepSamples]
     warmupDb = coarsePowerDb[:prepSamples]
     # correct starting point and end point of each period, to make lines connected
-    if warmupT[-1] < _calibrateSoundBurstSec * warmUp:
-        warmupT = warmupT + [_calibrateSoundBurstSec * warmUp]
+    if len(warmupT) > 0 and warmupT[-1] < warmUp:
+        warmupT = warmupT + [warmUp]
         warmupDb = warmupDb + [start]
     recT = coarseT[prepSamples:postSamples]
     recDb = coarsePowerDb[prepSamples:postSamples]
 
-    if recT[0] > float(_calibrateSoundBurstSec * warmUp):
+    if len(recT) > 0 and recT[0] > float(warmUp):
         print("need interpolate power")
-        recT = [warmUp * _calibrateSoundBurstSec] + recT
+        recT = [warmUp] + recT
         recDb = [start] + recDb
 
-    if rec[-1] < (_calibrateSoundBurstSec * (warmUp + repeats)):
-        recT = recT + [(_calibrateSoundBurstSec * (warmUp + repeats))]
+    if len(recT) > 0 and recT[-1] < ((_calibrateSoundBurstSec * repeats) + warmUp):
+        recT = recT + [(_calibrateSoundBurstSec * repeats) + warmUp]
         recDb = recDb + [end]
     postT = coarseT[postSamples:]
     postDb = coarsePowerDb[postSamples:]
-    if postT[0] > (_calibrateSoundBurstSec * (warmUp + repeats)):
-        postT = [(_calibrateSoundBurstSec * (warmUp + repeats))] + coarseT[postSamples:]
+    if len(postT) > 0 and postT[0] > ((_calibrateSoundBurstSec * repeats) + warmUp):
+        postT = [(_calibrateSoundBurstSec * repeats) + warmUp] + coarseT[postSamples:]
         postDb = [end] + coarsePowerDb[postSamples:]
 
     return warmupT, warmupDb, recT, recDb, sdDb, postT, postDb
