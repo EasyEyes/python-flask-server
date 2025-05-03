@@ -186,20 +186,26 @@ def allHzPowerCheck(rec, fs, _calibrateSoundPowerBinDesiredSec, _calibrateSoundB
     coarseHz = int(fs / n)
     print("number of bin",n)
     print("bin size", coarseHz)
+    print("length of power", len(power))
     # Sampling times for plotting
     t = np.arange(len(power)) / fs
     coarseSamples = int(np.ceil(len(power) / n))
     coarsePowerDb = np.zeros(coarseSamples)
+    print("coarsePowerDb...", len(coarsePowerDb))
     coarseT = np.zeros(coarseSamples)
     for i in range(coarseSamples):
       indices = range(i * n, min((i + 1) * n, len(power)))
       extremeIndices = [indices[0],indices[-1]]
-      coarsePowerDb[i] = 10 * np.log10(np.mean(power[indices]))
+      m = np.mean(power[indices])
+      if m == 0:
+        m = 1e-10
+      coarsePowerDb[i] = 10 * np.log10(m)
       coarseT[i] = np.mean(t[extremeIndices])
     prepSamples=round(coarseHz *warmUp)
     postSamples=round(coarseHz * ((_calibrateSoundBurstSec * repeats) + warmUp))
     print('prepSamples',prepSamples)
     print('postSamples',postSamples)
+    print("coarsePowerDb", coarsePowerDb, len(coarsePowerDb))
     sdDb=np.round(np.std(coarsePowerDb[prepSamples:postSamples]),1)
     coarseT = np.round(coarseT, 3).tolist()
     coarsePowerDb = np.round(coarsePowerDb,3).tolist()
