@@ -276,11 +276,14 @@ def impulse_to_frequency_response(impulse_response, fs, time_array, total_durati
         fs: Sampling frequency in Hz
         time_array: Array of time values for the impulse response
         total_duration: Total duration for which to pad the impulse response if needed
+        total_duration_1000hz: Duration for computing gain at 1000 Hz
         
     Returns:
-        frequencies: Array of frequency values in Hz
-        gains: Array of gain values (amplitude spectrum)
+        frequencies: Array of frequency values from 0 to fs/2 with 5 Hz interval
+        gains: Array of gain values (amplitude spectrum) corresponding to the frequencies
         gain_at_1000hz: Interpolated gain value at 1000 Hz
+        impulse_response: The (potentially padded) impulse response
+        impulse_response_1000hz: The impulse response used for 1000 Hz calculation
     """
     # Ensure input is a numpy array
     impulse_response = np.array(impulse_response)
@@ -318,18 +321,23 @@ def impulse_to_frequency_response(impulse_response, fs, time_array, total_durati
     # Compute amplitude spectrum (magnitude of frequency response)
     gains = np.abs(fr)
     
-    # Find the gain at 1000 Hz
-    # Since 1000 Hz is positive, we focus on the positive frequency range
+    # Keep only positive frequencies and corresponding gains
     pos_mask = frequencies >= 0
     pos_freqs = frequencies[pos_mask]
     pos_gains = gains[pos_mask]
     
+    # Create new frequency array from 0 to fs/2 with step of 5 Hz
+    nyquist = fs/2
+    new_freqs = np.arange(0, nyquist + (5 - nyquist % 5) % 5, 5)
+    
     # Create an interpolation function for positive frequencies
     interp_func = interp1d(pos_freqs, pos_gains, kind='linear', bounds_error=False, fill_value="extrapolate")
     
+    # Get gains at the new frequency points
+    new_gains = interp_func(new_freqs)
+    
     # Evaluate the interpolation function at 1000 Hz
     gain_at_1000hz = float(interp_func(1000))
-
     
-    return frequencies.tolist(), gains.tolist(), gain_at_1000hz, impulse_response.tolist(), impulse_response_1000hz.tolist()
+    return new_freqs.tolist(), new_gains.tolist(), gain_at_1000hz, impulse_response.tolist(), impulse_response_1000hz.tolist()
     
