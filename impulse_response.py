@@ -1,7 +1,8 @@
 import numpy as np
 import copy
-from scipy.fft import fft, ifft, rfft, irfft
+from scipy.fft import fft, ifft, rfft, irfft, fftfreq
 from pickle import dumps
+from scipy.interpolate import interp1d
 
 
 '''
@@ -264,4 +265,45 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
         return ir, autocorrelation
     else:
         return ir.tolist(), autocorrelation.tolist(), fs2
+    
+
+def impulse_to_frequency_response(impulse_response, fs):
+    """
+    Convert an impulse response to frequency response (amplitude spectrum).
+    
+    Args:
+        impulse_response: Impulse response signal as numpy array
+        fs: Sampling frequency in Hz
+        
+    Returns:
+        frequencies: Array of frequency values in Hz
+        gains: Array of gain values (amplitude spectrum)
+        gain_at_1000hz: Interpolated gain value at 1000 Hz
+    """
+    # Ensure input is a numpy array
+    impulse_response = np.array(impulse_response)
+    
+    # Compute FFT
+    fr = fft(impulse_response)
+    
+    # Get frequency values
+    n = len(impulse_response)
+    frequencies = fftfreq(n, 1/fs)
+    
+    # Compute amplitude spectrum (magnitude of frequency response)
+    gains = np.abs(fr)
+    
+    # Find the gain at 1000 Hz
+    # Since 1000 Hz is positive, we focus on the positive frequency range
+    pos_mask = frequencies >= 0
+    pos_freqs = frequencies[pos_mask]
+    pos_gains = gains[pos_mask]
+    
+    # Create an interpolation function for positive frequencies
+    interp_func = interp1d(pos_freqs, pos_gains, kind='linear', bounds_error=False, fill_value="extrapolate")
+    
+    # Evaluate the interpolation function at 1000 Hz
+    gain_at_1000hz = float(interp_func(1000))
+    
+    return frequencies.tolist(), gains.tolist(), gain_at_1000hz
     

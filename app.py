@@ -10,7 +10,7 @@ matplotlib.use("Agg")
 import time
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
-from impulse_response import run_ir_task, estimate_samples_per_mls_, adjust_mls_length, compute_impulse_resp
+from impulse_response import run_ir_task, estimate_samples_per_mls_, adjust_mls_length, compute_impulse_resp, impulse_to_frequency_response
 from inverted_impulse_response import run_component_iir_task, run_system_iir_task, run_convolution_task, run_ir_convolution_task
 from volume import run_volume_task,run_volume_task_nonlinear
 from volume import get_model_parameters
@@ -446,6 +446,29 @@ def handle_ir_convolution_task(request_json, task):
         }
     }
 
+def handle_frequency_response_task(request_json, task):
+    """
+    Handler for the frequency response task.
+    Converts an impulse response to a frequency response.
+    """
+    if "impulse_response" not in request_json:
+        return 400, "Request Body is missing an 'impulse_response' entry"
+    if "sample_rate" not in request_json:
+        return 400, "Request Body is missing a 'sample_rate' entry"
+    
+    impulse_response = request_json["impulse_response"]
+    sample_rate = request_json["sample_rate"]
+    
+    frequencies, gains, gain_at_1000hz = impulse_to_frequency_response(impulse_response, sample_rate)
+    
+    return 200, {
+        str(task): {
+            'frequencies': frequencies,
+            'gains': gains,
+            'gain_at_1000hz': gain_at_1000hz
+        }
+    }
+
 SUPPORTED_TASKS = {
     'impulse-response': handle_impulse_response_task,
     'autocorrelation': handle_autocorrelation_task,
@@ -461,7 +484,8 @@ SUPPORTED_TASKS = {
     'subtracted-psd':handle_subtracted_psd_task,
     'mls':handle_mls_task,
     'background-psd': handle_background_psd_task,
-    'mls-psd': handle_mls_psd_task
+    'mls-psd': handle_mls_psd_task,
+    'frequency-response': handle_frequency_response_task
 }
 
 def print_memory_usage():
