@@ -451,21 +451,41 @@ def handle_frequency_response_task(request_json, task):
     Handler for the frequency response task.
     Converts an impulse response to a frequency response.
     """
-    if "impulse_response" not in request_json:
-        return 400, "Request Body is missing an 'impulse_response' entry"
+    if "impulse_response_microphone" not in request_json:
+        return 400, "Request Body is missing an 'impulse_response_microphone' entry"
+    if "impulse_response_loudspeaker" not in request_json:
+        return 400, "Request Body is missing an 'impulse_response_loudspeaker' entry"
     if "sample_rate" not in request_json:
         return 400, "Request Body is missing a 'sample_rate' entry"
-    
-    impulse_response = request_json["impulse_response"]
+    if "time_array" not in request_json:
+        return 400, "Request Body is missing a 'time_array' entry"
+    if "total_duration" not in request_json:
+        return 400, "Request Body is missing a 'total_duration' entry"
+    if "total_duration_1000hz" not in request_json:
+        return 400, "Request Body is missing a 'total_duration_1000hz' entry"
+
+    impulse_response_microphone = request_json["impulse_response_microphone"]
+    impulse_response_loudspeaker = request_json["impulse_response_loudspeaker"]
     sample_rate = request_json["sample_rate"]
-    
-    frequencies, gains, gain_at_1000hz = impulse_to_frequency_response(impulse_response, sample_rate)
+    time_array = request_json["time_array"]
+    total_duration = request_json["total_duration"]
+    total_duration_1000hz = request_json["total_duration_1000hz"]
+
+    frequencies_microphone, gains_microphone, gain_at_1000hz_microphone, impulse_response_microphone, impulse_response_1000hz_microphone = impulse_to_frequency_response(impulse_response_microphone, sample_rate, time_array, total_duration, total_duration_1000hz)
+    frequencies_loudspeaker, gains_loudspeaker, gain_at_1000hz_loudspeaker, impulse_response_loudspeaker, impulse_response_1000hz_loudspeaker = impulse_to_frequency_response(impulse_response_loudspeaker, sample_rate, time_array, total_duration, total_duration_1000hz)
     
     return 200, {
         str(task): {
-            'frequencies': frequencies,
-            'gains': gains,
-            'gain_at_1000hz': gain_at_1000hz
+            'frequencies_microphone': frequencies_microphone,
+            'gains_microphone': gains_microphone,
+            'gain_at_1000hz_microphone': gain_at_1000hz_microphone,
+            'impulse_response_microphone': impulse_response_microphone,
+            'impulse_response_1000hz_microphone': impulse_response_1000hz_microphone,
+            'frequencies_loudspeaker': frequencies_loudspeaker,
+            'gains_loudspeaker': gains_loudspeaker,
+            'gain_at_1000hz_loudspeaker': gain_at_1000hz_loudspeaker,
+            'impulse_response_loudspeaker': impulse_response_loudspeaker,
+            'impulse_response_1000hz_loudspeaker': impulse_response_1000hz_loudspeaker
         }
     }
 

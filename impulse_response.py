@@ -267,13 +267,15 @@ def run_ir_task(mls, sig, P=(1 << 18)-1, sampleRate=96000, NUM_PERIODS=3, debug=
         return ir.tolist(), autocorrelation.tolist(), fs2
     
 
-def impulse_to_frequency_response(impulse_response, fs):
+def impulse_to_frequency_response(impulse_response, fs, time_array, total_duration, total_duration_1000hz):
     """
     Convert an impulse response to frequency response (amplitude spectrum).
     
     Args:
         impulse_response: Impulse response signal as numpy array
         fs: Sampling frequency in Hz
+        time_array: Array of time values for the impulse response
+        total_duration: Total duration for which to pad the impulse response if needed
         
     Returns:
         frequencies: Array of frequency values in Hz
@@ -282,6 +284,29 @@ def impulse_to_frequency_response(impulse_response, fs):
     """
     # Ensure input is a numpy array
     impulse_response = np.array(impulse_response)
+    time_array = np.array(time_array)
+    
+    # Calculate expected number of samples for the total duration
+    expected_samples = int(total_duration/2 * fs)
+    expected_samples_1000hz = int(total_duration_1000hz/2 * fs)
+
+    #  create padded array for 1000hz
+    impulse_response_1000hz = impulse_response
+    if len(impulse_response) < expected_samples_1000hz:
+        padded_ir_1000hz = np.zeros(expected_samples_1000hz)
+        padded_ir_1000hz[:len(impulse_response)] = impulse_response
+        impulse_response_1000hz = padded_ir_1000hz
+
+    # Check if padding is needed
+    if len(impulse_response) < expected_samples:
+        # Create a padded array filled with zeros
+        padded_ir = np.zeros(expected_samples)
+        
+        # Copy the original impulse response values
+        padded_ir[:len(impulse_response)] = impulse_response
+        
+        # Use the padded impulse response
+        impulse_response = padded_ir
     
     # Compute FFT
     fr = fft(impulse_response)
@@ -304,6 +329,7 @@ def impulse_to_frequency_response(impulse_response, fs):
     
     # Evaluate the interpolation function at 1000 Hz
     gain_at_1000hz = float(interp_func(1000))
+
     
-    return frequencies.tolist(), gains.tolist(), gain_at_1000hz
+    return frequencies.tolist(), gains.tolist(), gain_at_1000hz, impulse_response.tolist(), impulse_response_1000hz.tolist()
     
