@@ -276,7 +276,7 @@ def impulse_to_frequency_response(impulse_response, fs, time_array, total_durati
         fs: Sampling frequency in Hz
         time_array: Array of time values for the impulse response
         total_duration: Total duration for which to pad the impulse response if needed
-        total_duration_1000hz: Duration for computing gain at 1000 Hz
+        total_duration_1000hz:
         
     Returns:
         frequencies: Array of frequency values from 0 to fs/2 with 5 Hz interval

@@ -11,7 +11,7 @@ import time
 from flask import Flask, request, make_response
 from flask_cors import CORS, cross_origin
 from impulse_response import run_ir_task, estimate_samples_per_mls_, adjust_mls_length, compute_impulse_resp, impulse_to_frequency_response
-from inverted_impulse_response import run_component_iir_task, run_system_iir_task, run_convolution_task, run_ir_convolution_task
+from inverted_impulse_response import run_component_iir_task, run_system_iir_task, run_convolution_task, run_ir_convolution_task, frequency_response_to_impulse_response
 from volume import run_volume_task,run_volume_task_nonlinear
 from volume import get_model_parameters
 import numpy as np
@@ -451,10 +451,8 @@ def handle_frequency_response_task(request_json, task):
     Handler for the frequency response task.
     Converts an impulse response to a frequency response.
     """
-    if "impulse_response_microphone" not in request_json:
-        return 400, "Request Body is missing an 'impulse_response_microphone' entry"
-    if "impulse_response_loudspeaker" not in request_json:
-        return 400, "Request Body is missing an 'impulse_response_loudspeaker' entry"
+    if "impulse_response" not in request_json:
+        return 400, "Request Body is missing an 'impulse_response' entry"
     if "sample_rate" not in request_json:
         return 400, "Request Body is missing a 'sample_rate' entry"
     if "time_array" not in request_json:
@@ -464,28 +462,62 @@ def handle_frequency_response_task(request_json, task):
     if "total_duration_1000hz" not in request_json:
         return 400, "Request Body is missing a 'total_duration_1000hz' entry"
 
-    impulse_response_microphone = request_json["impulse_response_microphone"]
-    impulse_response_loudspeaker = request_json["impulse_response_loudspeaker"]
+    impulse_response = request_json["impulse_response"]
     sample_rate = request_json["sample_rate"]
     time_array = request_json["time_array"]
     total_duration = request_json["total_duration"]
     total_duration_1000hz = request_json["total_duration_1000hz"]
 
-    frequencies_microphone, gains_microphone, gain_at_1000hz_microphone, impulse_response_microphone, impulse_response_1000hz_microphone = impulse_to_frequency_response(impulse_response_microphone, sample_rate, time_array, total_duration, total_duration_1000hz)
-    frequencies_loudspeaker, gains_loudspeaker, gain_at_1000hz_loudspeaker, impulse_response_loudspeaker, impulse_response_1000hz_loudspeaker = impulse_to_frequency_response(impulse_response_loudspeaker, sample_rate, time_array, total_duration, total_duration_1000hz)
+    frequencies, gains, gain_at_1000hz, impulse_response, impulse_response_1000hz = impulse_to_frequency_response(impulse_response, sample_rate, time_array, total_duration, total_duration_1000hz)
     
     return 200, {
         str(task): {
-            'frequencies_microphone': frequencies_microphone,
-            'gains_microphone': gains_microphone,
-            'gain_at_1000hz_microphone': gain_at_1000hz_microphone,
-            'impulse_response_microphone': impulse_response_microphone,
-            'impulse_response_1000hz_microphone': impulse_response_1000hz_microphone,
-            'frequencies_loudspeaker': frequencies_loudspeaker,
-            'gains_loudspeaker': gains_loudspeaker,
-            'gain_at_1000hz_loudspeaker': gain_at_1000hz_loudspeaker,
-            'impulse_response_loudspeaker': impulse_response_loudspeaker,
-            'impulse_response_1000hz_loudspeaker': impulse_response_1000hz_loudspeaker
+            'frequencies': frequencies,
+            'gains': gains,
+            'gain_at_1000hz': gain_at_1000hz,
+            'impulse_response': impulse_response,
+            'impulse_response_1000hz': impulse_response_1000hz
+        }
+    }
+
+def handle_frequency_response_to_impulse_response_task(request_json, task):
+    """
+    Handler for the frequency response to impulse response task.
+    Converts a frequency response to an impulse response.
+    """
+    if "frequencies" not in request_json:
+        return 400, "Request Body is missing a 'frequencies' entry"
+    if "gains" not in request_json:
+        return 400, "Request Body is missing a 'gains' entry"
+    if "sample_rate" not in request_json:
+        return 400, "Request Body is missing a 'sample_rate' entry"
+    if "iir_length" not in request_json:
+        return 400, "Request Body is missing a 'ir_length' entry"
+    if "calibrateSoundIIRPhase" not in request_json:
+        return 400, "Request Body is missing a 'calibrateSoundIIRPhase' entry"
+    if "total_duration" not in request_json:
+        return 400, "Request Body is missing a 'total_duration' entry"
+    if "total_duration_1000hz" not in request_json:
+        return 400, "Request Body is missing a 'total_duration_1000hz' entry"
+    
+
+    frequencies = request_json["frequencies"]
+    gains = request_json["gains"]
+    sample_rate = request_json["sample_rate"]
+    iir_length = request_json["iir_length"]
+    calibrateSoundIIRPhase = request_json["calibrateSoundIIRPhase"]
+    total_duration = request_json["total_duration"]
+    total_duration_1000hz = request_json["total_duration_1000hz"]
+
+
+    impulse_response, gain_at_1000hz, frequencies, gains, impulse_response_1000hz = frequency_response_to_impulse_response(frequencies, gains, sample_rate, calibrateSoundIIRPhase, iir_length, total_duration, total_duration_1000hz)
+    return 200, {
+        str(task): {
+            'impulse_response': impulse_response,
+            'gain_at_1000hz': gain_at_1000hz,
+            'frequencies': frequencies,
+            'gains': gains,
+            'impulse_response_1000hz': impulse_response_1000hz
         }
     }
 
@@ -505,7 +537,8 @@ SUPPORTED_TASKS = {
     'mls':handle_mls_task,
     'background-psd': handle_background_psd_task,
     'mls-psd': handle_mls_psd_task,
-    'frequency-response': handle_frequency_response_task
+    'frequency-response': handle_frequency_response_task,
+    'frequency-response-to-impulse-response': handle_frequency_response_to_impulse_response_task
 }
 
 def print_memory_usage():

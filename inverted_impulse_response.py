@@ -103,6 +103,70 @@ def calculateInverseIRNoFilter(original_ir, _calibrateSoundIIRPhase, iir_length=
         return inverse_ir_min
     else:
         return inverse_ir
+    
+def frequency_response_to_impulse_response(frequencies, gains, fs, _calibrateSoundIIRPhase, iir_length=500, total_duration=None, total_duration_1000hz=None):
+    """
+    Convert frequency response to impulse response.
+    Similar to calculateInverseIRNoFilter, but starts with frequency data instead of time-domain IR. 
+
+    Args:
+        frequencies: Frequencies in Hz
+        gains: Gains at each frequency
+        fs: Sampling rate
+
+    Returns:
+        tuple: (impulse response as numpy array, gain at 1000 Hz)
+    """
+    _calibrateSoundIIRPhase = "minimum"
+    L_1000hz = int(total_duration_1000hz/2 * fs)
+    L_all_hz = int(total_duration/2 * fs)
+    # L = max(L_1000hz, L_all_hz)
+    L = iir_length
+
+    # Calculate gain at 1000 Hz by interpolation
+    gain_at_1000Hz = np.interp(1000, frequencies, gains)
+
+    fft_freqs = np.linspace(0, fs/2, L//2+1)
+    
+    # Interpolate the gains to match these frequencies
+    interpolated_gains = np.interp(fft_freqs, frequencies, gains)
+    
+    # Create full spectrum (mirror for negative frequencies)
+    H = np.concatenate([interpolated_gains, interpolated_gains[-2:0:-1]])
+
+    nfft = L
+    ir = np.roll(ifft_sym(H),int(nfft/2))
+    if _calibrateSoundIIRPhase == 'minimum':
+        print('calculate inverse impulse response with minimum phase')
+        ir_min = minimum_phase((ir), method='homomorphic')
+        # if len ir_min is less that L_all_hz, pad with zeros 
+        ir_min_padded = ir_min
+        ir_min_1000hz_padded = ir_min
+        if len(ir_min) < L_all_hz:
+            ir_min_padded = np.pad(ir_min, (0, L_all_hz - len(ir_min)), mode='constant')
+        elif len(ir_min) > L_all_hz:
+            ir_min_padded = ir_min[:L_all_hz]
+       
+        if len(ir_min) < L_1000hz:
+            ir_min_1000hz_padded = np.pad(ir_min, (0, L_1000hz - len(ir_min)), mode='constant')
+        elif len(ir_min) > L_1000hz:
+            ir_min_1000hz_padded = ir_min[:L_1000hz]
+        return ir_min_padded.tolist(), gain_at_1000Hz, fft_freqs.tolist(), interpolated_gains.tolist(), ir_min_1000hz_padded.tolist()
+    else:
+        # if len ir is less that L_all_hz, pad with zeros 
+        ir_padded = ir
+        ir_1000hz_padded = ir
+        if len(ir) < L_all_hz:
+            ir_padded = np.pad(ir, (0, L_all_hz - len(ir)), mode='constant')
+        elif len(ir) > L_all_hz:
+            ir_padded = ir[:L_all_hz]
+        if len(ir) < L_1000hz:
+            ir_1000hz_padded = np.pad(ir, (0, L_1000hz - len(ir)), mode='constant')
+        elif len(ir) > L_1000hz:
+            ir_1000hz_padded = ir[:L_1000hz]
+        return ir_padded.tolist(), gain_at_1000Hz, fft_freqs.tolist(), interpolated_gains.tolist(), ir_1000hz_padded.tolist()
+
+
 
 def calculateInverseIR(original_ir, lowHz, highHz, _calibrateSoundIIRPhase, iir_length=500, fs = 96000):
 
