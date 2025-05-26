@@ -134,6 +134,9 @@ def frequency_response_to_impulse_response(frequencies, gains, fs, _calibrateSou
     # Create full spectrum (mirror for negative frequencies)
     H = np.concatenate([interpolated_gains, interpolated_gains[-2:0:-1]])
 
+    # change to linear gain: gain = 10^(gain_db/20)
+    H = 10**(H/20)
+
     nfft = L
     ir = np.roll(ifft_sym(H),int(nfft/2))
     if _calibrateSoundIIRPhase == 'minimum':

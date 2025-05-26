@@ -336,8 +336,12 @@ def impulse_to_frequency_response(impulse_response, fs, time_array, total_durati
     # Get gains at the new frequency points
     new_gains = interp_func(new_freqs)
     
-    # Evaluate the interpolation function at 1000 Hz
-    gain_at_1000hz = float(interp_func(1000))
+    # Convert linear gains to dB
+    new_gains_db = 20 * np.log10(new_gains)
     
-    return new_freqs.tolist(), new_gains.tolist(), gain_at_1000hz, impulse_response.tolist(), impulse_response_1000hz.tolist()
+    # Evaluate the interpolation function at 1000 Hz and convert to dB
+    gain_at_1000hz_linear = float(interp_func(1000))
+    gain_at_1000hz = 20 * np.log10(gain_at_1000hz_linear)
+    
+    return new_freqs.tolist(), new_gains_db.tolist(), gain_at_1000hz, impulse_response.tolist(), impulse_response_1000hz.tolist()
     
