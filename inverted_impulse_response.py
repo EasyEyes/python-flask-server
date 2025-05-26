@@ -117,7 +117,7 @@ def frequency_response_to_impulse_response(frequencies, gains, fs, _calibrateSou
     Returns:
         tuple: (impulse response as numpy array, gain at 1000 Hz)
     """
-    _calibrateSoundIIRPhase = "minimum"
+    # _calibrateSoundIIRPhase = "minimum"
     L_1000hz = int(total_duration_1000hz/2 * fs)
     L_all_hz = int(total_duration/2 * fs)
     # L = max(L_1000hz, L_all_hz)
