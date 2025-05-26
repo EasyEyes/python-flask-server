@@ -97,9 +97,10 @@ def calculateInverseIRNoFilter(original_ir, _calibrateSoundIIRPhase, iir_length=
     if _calibrateSoundIIRPhase == 'minimum':
         iH = np.square(iH)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
+    inverse_ir = scaleInverseResponse(inverse_ir,iH,fs)
     if _calibrateSoundIIRPhase == 'minimum':
         print('calculate inverse impulse response with minimum phase')
-        inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
+        inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic', half=True)
         return inverse_ir_min
     else:
         return inverse_ir
@@ -141,7 +142,7 @@ def frequency_response_to_impulse_response(frequencies, gains, fs, _calibrateSou
     ir = np.roll(ifft_sym(H),int(nfft/2))
     if _calibrateSoundIIRPhase == 'minimum':
         print('calculate inverse impulse response with minimum phase')
-        ir_min = minimum_phase((ir), method='homomorphic')
+        ir_min = minimum_phase((ir), method='homomorphic', half=False)
         # if len ir_min is less that L_all_hz, pad with zeros 
         ir_min_padded = ir_min
         ir_min_1000hz_padded = ir_min
@@ -195,7 +196,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, _calibrateSoundIIRPhase, iir_
     inverse_ir = scaleInverseResponse(inverse_ir,iH,fs)
     if _calibrateSoundIIRPhase == 'minimum':
         print('calculate inverse impulse response with minimum phase')
-        inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic')
+        inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic', half=True)
         return inverse_ir_min
     else:
         return inverse_ir
