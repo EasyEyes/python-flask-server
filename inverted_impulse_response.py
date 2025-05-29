@@ -105,6 +105,27 @@ def calculateInverseIRNoFilter(original_ir, _calibrateSoundIIRPhase, iir_length=
     else:
         return inverse_ir
     
+def pad_or_truncate_ir(ir, target_length):
+    """
+    Pad with zeros or truncate an impulse response to match the target length.
+    
+    Args:
+        ir: Input impulse response array
+        target_length: Desired length for the output
+        
+    Returns:
+        numpy array: Padded or truncated impulse response
+    """
+    if len(ir) < target_length:
+        # Pad with zeros at the end
+        return np.pad(ir, (0, target_length - len(ir)), mode='constant')
+    elif len(ir) > target_length:
+        # Truncate to target length
+        return ir[:target_length]
+    else:
+        # Already the correct length
+        return ir
+
 def frequency_response_to_impulse_response(frequencies, gains, fs, _calibrateSoundIIRPhase, iir_length=500, total_duration=None, total_duration_1000hz=None):
     """
     Convert frequency response to impulse response.
@@ -138,36 +159,22 @@ def frequency_response_to_impulse_response(frequencies, gains, fs, _calibrateSou
     # change to linear gain: gain = 10^(gain_db/20)
     H = 10**(H/20)
 
-    nfft = L
+    nfft = len(H)
     ir = np.roll(ifft_sym(H),int(nfft/2))
     if _calibrateSoundIIRPhase == 'minimum':
         print('calculate inverse impulse response with minimum phase')
         ir_min = minimum_phase((ir), method='homomorphic', half=False)
-        # if len ir_min is less that L_all_hz, pad with zeros 
-        ir_min_padded = ir_min
-        ir_min_1000hz_padded = ir_min
-        if len(ir_min) < L_all_hz:
-            ir_min_padded = np.pad(ir_min, (0, L_all_hz - len(ir_min)), mode='constant')
-        elif len(ir_min) > L_all_hz:
-            ir_min_padded = ir_min[:L_all_hz]
-       
-        if len(ir_min) < L_1000hz:
-            ir_min_1000hz_padded = np.pad(ir_min, (0, L_1000hz - len(ir_min)), mode='constant')
-        elif len(ir_min) > L_1000hz:
-            ir_min_1000hz_padded = ir_min[:L_1000hz]
+        
+        # Use the new padding function for both target lengths
+        ir_min_padded = pad_or_truncate_ir(ir_min, L_all_hz)
+        ir_min_1000hz_padded = pad_or_truncate_ir(ir_min, L_1000hz)
+        
         return ir_min_padded.tolist(), gain_at_1000Hz, fft_freqs.tolist(), interpolated_gains.tolist(), ir_min_1000hz_padded.tolist()
     else:
-        # if len ir is less that L_all_hz, pad with zeros 
-        ir_padded = ir
-        ir_1000hz_padded = ir
-        if len(ir) < L_all_hz:
-            ir_padded = np.pad(ir, (0, L_all_hz - len(ir)), mode='constant')
-        elif len(ir) > L_all_hz:
-            ir_padded = ir[:L_all_hz]
-        if len(ir) < L_1000hz:
-            ir_1000hz_padded = np.pad(ir, (0, L_1000hz - len(ir)), mode='constant')
-        elif len(ir) > L_1000hz:
-            ir_1000hz_padded = ir[:L_1000hz]
+        # Use the new padding function for both target lengths
+        ir_padded = pad_or_truncate_ir(ir, L_all_hz)
+        ir_1000hz_padded = pad_or_truncate_ir(ir, L_1000hz)
+        
         return ir_padded.tolist(), gain_at_1000Hz, fft_freqs.tolist(), interpolated_gains.tolist(), ir_1000hz_padded.tolist()
 
 
@@ -271,6 +278,8 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
         ir = ir.reshape((ir.shape[1],))
     
     componentIRDeg = np.zeros_like(componentIRFreqs)
+    componentIRFreqs = np.array(componentIRFreqs)
+    componentIRGains = np.array(componentIRGains)
     ir_component, angle, system_angle = splitter(ir, componentIRFreqs, componentIRGains, componentIRDeg, sampleRate)
 
     #have my IR here, subtract the microphone/louadspeaker ir from this?
@@ -470,7 +479,7 @@ def run_convolution_task(inverse_response, mls, inverse_response_no_bandpass, at
     print("Min value convolution: " + str(minimum))
     return convolution_div.tolist(), convolution_div_no_bandpass.tolist()
 
-def run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir):
+def run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir, sample_rate, duration):
     """
     Convolve an input signal with both microphone and loudspeaker impulse responses.
     
@@ -478,6 +487,8 @@ def run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir):
         input_signal: Input audio signal as numpy array
         microphone_ir: Microphone impulse response as numpy array
         loudspeaker_ir: Loudspeaker impulse response as numpy array
+        sample_rate: Sample rate of the input signal
+        duration: duration needed for the input signal. Repeats the input signal if necessary.
         
     Returns:
         The convolved output signal as a list
@@ -486,6 +497,13 @@ def run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir):
     input_signal = np.array(input_signal)
     microphone_ir = np.array(microphone_ir)
     loudspeaker_ir = np.array(loudspeaker_ir)
+
+    length_of_input_signal = len(input_signal)
+    required_length = int(sample_rate * duration)
+    # repeat the input signal if necessary so that it is the same length as the required length
+    if length_of_input_signal < required_length:
+        input_signal = np.tile(input_signal, math.ceil(required_length / length_of_input_signal))
+
     
     # For efficiency, convolve with the shorter IR first
     if len(microphone_ir) <= len(loudspeaker_ir):
@@ -498,5 +516,8 @@ def run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir):
         intermediate_signal = convolve(input_signal, loudspeaker_ir, mode='full')
         # Then convolve with microphone IR
         output_signal = convolve(intermediate_signal, microphone_ir, mode='full')
+
+    # make output signal same length as the required length
+    output_signal = output_signal[:required_length]
     
     return output_signal.tolist()

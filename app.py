@@ -433,12 +433,18 @@ def handle_ir_convolution_task(request_json, task):
         return 400, "Request Body is missing a 'microphone_ir' entry"
     if "loudspeaker_ir" not in request_json:
         return 400, "Request Body is missing a 'loudspeaker_ir' entry"
+    if "sample_rate" not in request_json:
+        return 400, "Request Body is missing a 'sample_rate' entry"
+    if "duration" not in request_json:
+        return 400, "Request Body is missing a 'duration' entry"
     
     input_signal = request_json['input_signal']
     microphone_ir = request_json['microphone_ir']
     loudspeaker_ir = request_json['loudspeaker_ir']
+    sample_rate = request_json['sample_rate']
+    duration = request_json['duration']
     
-    output_signal = run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir)
+    output_signal = run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir, sample_rate, duration)
     
     return 200, {
         str(task): {
