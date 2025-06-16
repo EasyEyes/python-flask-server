@@ -2,7 +2,7 @@ import numpy as np
 import math
 from scipy.fft import fft, ifft, irfft, fftfreq
 from pickle import loads
-from scipy.signal import lfilter, butter, minimum_phase, convolve
+from scipy.signal import lfilter, butter, minimum_phase, convolve, fftconvolve
 from scipy.interpolate import interp1d
 
 def ifft_sym(sig):
@@ -78,16 +78,16 @@ def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, targetHz=1000):
     inverse_ir = inverse_ir/scale_value
     return inverse_ir
 
-def calculateInverseIRNoFilter(original_ir, _calibrateSoundIIRPhase, iir_length=500, fs = 96000, componentIRFreqs = None, componentIRGains = None):
+def calculateInverseIRNoFilter(original_ir, _calibrateSoundIIRPhase, iir_length=500, fs = 96000):
 
     L = iir_length
     # center original IR and prune it to L samples
     nfft = len(original_ir)
     H = np.abs(fft(original_ir))
     ir_new = np.roll(ifft_sym(H),int(nfft/2))
-    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1), dtype=np.float32)/(L+1)))
+    # smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1), dtype=np.float32)/(L+1)))
     ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)+np.floor(L/2).astype(int)] # centered around -l/2 to L/2
-    ir_pruned = smoothing_win * ir_pruned
+    # ir_pruned = smoothing_win * ir_pruned
 
     # calculate inverse from pruned IR, limit to relevant bandwidth and scale
     nfft = L
@@ -186,9 +186,9 @@ def calculateInverseIR(original_ir, lowHz, highHz, _calibrateSoundIIRPhase, iir_
     nfft = len(original_ir)
     H = np.abs(fft(original_ir))
     ir_new = np.roll(ifft_sym(H),int(nfft/2))
-    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1), dtype=np.float32)/(L+1)))
+    # smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1), dtype=np.float32)/(L+1)))
     ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)+np.floor(L/2).astype(int)] # centered around -l/2 to L/2
-    ir_pruned = smoothing_win * ir_pruned
+    # ir_pruned = smoothing_win * ir_pruned
 
     # calculate inverse from pruned IR, limit to relevant bandwidth and scale
     nfft = L
@@ -199,7 +199,6 @@ def calculateInverseIR(original_ir, lowHz, highHz, _calibrateSoundIIRPhase, iir_
     limit_ranges = [lowHz, highHz] #was 100 and 16000
     iH = limitInverseResponseBandwidth(iH, fs, limit_ranges)
     inverse_ir = np.roll(ifft_sym(iH),int(nfft/2))
-    #inverse_ir = smoothing_win * inverse_ir
     inverse_ir = scaleInverseResponse(inverse_ir,iH,fs)
     if _calibrateSoundIIRPhase == 'minimum':
         print('calculate inverse impulse response with minimum phase')
@@ -235,9 +234,9 @@ def prune_ir(original_ir, irLength):
     nfft = len(original_ir)
     H = np.abs(fft(original_ir))
     ir_new = np.roll(ifft_sym(H),int(nfft/2))
-    smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1), dtype=np.float32)/(L+1)))
+    # smoothing_win = 0.5*(1-np.cos(2*np.pi*np.array(range(1,L+1), dtype=np.float32)/(L+1)))
     ir_pruned = ir_new[np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int):np.floor(len(ir_new)/2).astype(int)-np.floor(L/2).astype(int) + L] # centered around -l/2 to L/2
-    ir_pruned = smoothing_win * ir_pruned
+    # ir_pruned = smoothing_win * ir_pruned
     return ir_pruned
 
 def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3,_calibrateSoundSmoothMinBandwidthHz = 200):
@@ -508,15 +507,14 @@ def run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir, sample_
     # For efficiency, convolve with the shorter IR first
     if len(microphone_ir) <= len(loudspeaker_ir):
         # First convolve with microphone IR
-        intermediate_signal = convolve(input_signal, microphone_ir, mode='full')
+        intermediate_signal = fftconvolve(input_signal, microphone_ir, mode='full')
         # Then convolve with loudspeaker IR
-        output_signal = convolve(intermediate_signal, loudspeaker_ir, mode='full')
+        output_signal = fftconvolve(intermediate_signal, loudspeaker_ir, mode='full')
     else:
         # First convolve with loudspeaker IR
-        intermediate_signal = convolve(input_signal, loudspeaker_ir, mode='full')
+        intermediate_signal = fftconvolve(input_signal, loudspeaker_ir, mode='full')
         # Then convolve with microphone IR
-        output_signal = convolve(intermediate_signal, microphone_ir, mode='full')
-
+        output_signal = fftconvolve(intermediate_signal, microphone_ir, mode='full')
     # make output signal same length as the required length
     output_signal = output_signal[:required_length]
     
