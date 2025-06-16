@@ -2,7 +2,7 @@ import numpy as np
 import math
 from scipy.fft import fft, ifft, irfft, fftfreq
 from pickle import loads
-from scipy.signal import lfilter, butter, minimum_phase, convolve, fftconvolve
+from scipy.signal import lfilter, butter, minimum_phase, convolve, fftconvolve, lfilter_zi
 from scipy.interpolate import interp1d
 
 def ifft_sym(sig):
@@ -101,6 +101,7 @@ def calculateInverseIRNoFilter(original_ir, _calibrateSoundIIRPhase, iir_length=
     if _calibrateSoundIIRPhase == 'minimum':
         print('calculate inverse impulse response with minimum phase')
         inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic', half=True)
+        print("Done calculating inverse impulse response with minimum phase")
         return inverse_ir_min
     else:
         return inverse_ir
@@ -164,6 +165,7 @@ def frequency_response_to_impulse_response(frequencies, gains, fs, _calibrateSou
     if _calibrateSoundIIRPhase == 'minimum':
         print('calculate inverse impulse response with minimum phase')
         ir_min = minimum_phase((ir), method='homomorphic', half=False)
+        print("Done calculating inverse impulse response with minimum phase")
         
         # Use the new padding function for both target lengths
         ir_min_padded = pad_or_truncate_ir(ir_min, L_all_hz)
@@ -203,6 +205,7 @@ def calculateInverseIR(original_ir, lowHz, highHz, _calibrateSoundIIRPhase, iir_
     if _calibrateSoundIIRPhase == 'minimum':
         print('calculate inverse impulse response with minimum phase')
         inverse_ir_min = minimum_phase((inverse_ir), method='homomorphic', half=True)
+        print("Done calculating inverse impulse response with minimum phase")
         return inverse_ir_min
     else:
         return inverse_ir
@@ -262,7 +265,7 @@ def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3,_calibrateSoundSm
     
     return smoothed_spectrum
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrateSoundSmoothMinBandwidthHz,calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrateSoundSmoothMinBandwidthHz,calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False, chunk_size=8192):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -290,7 +293,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     ####cheap transducer trello
     #Convolve three periods of MLS with IIR. Retain only the middle period.
     three_mls_periods = np.tile(mls,3)
-    three_mls_periods_convolution = lfilter(inverse_response_component,1,three_mls_periods)
+    three_mls_periods_convolution = lfilter_chunked(inverse_response_component,1,three_mls_periods,chunk_size)
     period_length = len(mls)
     start_index = period_length
     end_index = start_index + period_length
@@ -368,7 +371,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     return_freq = frequencies[:len(frequencies)//2]
     return inverse_response_component.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_pruned.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False, chunk_size=8192):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -389,7 +392,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     ####cheap transducer trello
     #Convolve three periods of MLS with IIR. Retain only the middle period.
     three_mls_periods = np.tile(mls,3)
-    three_mls_periods_convolution = lfilter(inverse_response,1,three_mls_periods)
+    three_mls_periods_convolution = lfilter_chunked(inverse_response,1,three_mls_periods,chunk_size)
     period_length = len(mls)
     start_index = period_length
     end_index = start_index + period_length
@@ -450,7 +453,7 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
 
     return inverse_response.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist(), attenuatorGain_dB, fMaxHz
 
-def run_convolution_task(inverse_response, mls, inverse_response_no_bandpass, attenuatorGain_dB, mls_amplitude):
+def run_convolution_task(inverse_response, mls, inverse_response_no_bandpass, attenuatorGain_dB, mls_amplitude, chunk_size=8192):
      
     orig_mls = mls
     N = 1 + math.ceil(len(inverse_response)/len(mls))
@@ -458,8 +461,8 @@ def run_convolution_task(inverse_response, mls, inverse_response_no_bandpass, at
     mls = np.tile(mls,N)
     print('length of tiled mls: ' + str(len(mls)))
     print('length of inverse_response: ' + str(len(inverse_response)))
-    convolution = lfilter(inverse_response,1,mls)
-    convolution_no_bandpass = lfilter(inverse_response_no_bandpass,1,mls)
+    convolution = lfilter_chunked(inverse_response,1,mls,chunk_size)
+    convolution_no_bandpass = lfilter_chunked(inverse_response_no_bandpass,1,mls,chunk_size)
 
     print('length of original convolution: ' + str(len(convolution)))
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
@@ -519,3 +522,45 @@ def run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir, sample_
     output_signal = output_signal[:required_length]
     
     return output_signal.tolist()
+
+def lfilter_chunked(b, a, x, chunk_size=8192):
+    """
+    Apply lfilter to a signal in chunks to reduce memory usage.
+    
+    Args:
+        b: Numerator coefficient array
+        a: Denominator coefficient array  
+        x: Input signal
+        chunk_size: Size of each chunk to process
+        
+    Returns:
+        Filtered signal
+    """
+    if len(x) <= chunk_size:
+        # If signal is small enough, use regular lfilter
+        return lfilter(b, a, x)
+    
+    # Initialize output array
+    y = np.zeros_like(x)
+    
+    # Get initial conditions for the filter
+    if len(b) > 1 or (len(a) > 1 and a[0] != 1):
+        zi = lfilter_zi(b, a)
+    else:
+        zi = None
+    
+    # Process signal in chunks
+    for i in range(0, len(x), chunk_size):
+        end_idx = min(i + chunk_size, len(x))
+        chunk = x[i:end_idx]
+        
+        if zi is not None:
+            # Apply filter with initial conditions
+            y_chunk, zi = lfilter(b, a, chunk, zi=zi)
+        else:
+            # Simple case - no initial conditions needed
+            y_chunk = lfilter(b, a, chunk)
+            
+        y[i:end_idx] = y_chunk
+    
+    return y
