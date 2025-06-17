@@ -4,7 +4,6 @@ from scipy.fft import fft, ifft, irfft, fftfreq
 from pickle import loads
 from scipy.signal import lfilter, butter, minimum_phase, convolve, fftconvolve, lfilter_zi
 from scipy.interpolate import interp1d
-import gc
 import psutil
 import os
 
@@ -594,140 +593,56 @@ def tile_and_filter_chunked(b, a, base_signal, repetitions, chunk_size=None):
     print(f"Processing in chunks of {chunk_size}")
     
     # Get initial conditions for the filter
-    if len(b) > 1 or (len(a) > 1 and a[0] != 1):
+    # For FIR filters (a = 1 or a = [1]), we don't need initial conditions
+    # Convert a to array if it's a scalar
+    a_array = np.atleast_1d(a)
+    is_fir_filter = len(a_array) == 1 and a_array[0] == 1
+    
+    if not is_fir_filter and (len(b) > 1 or (len(a_array) > 1 and a_array[0] != 1)):
+        print("getting initial conditions")
         zi = lfilter_zi(b, a)
+        print("after getting initial conditions")
+        check_memory_usage()
     else:
         zi = None
+        if is_fir_filter:
+            print("FIR filter detected, skipping initial conditions")
     
     output_chunks = []
     base_signal = np.array(base_signal, dtype=np.float32)  # Use float32 to save memory
-    
+    print("after conversion to float32")
+    check_memory_usage()
     chunk_count = 0
     
     # Process each repetition in chunks
     for rep in range(repetitions):
-        if rep % 10 == 0:
-            check_memory_usage()
-            
+        
         for i in range(0, len(base_signal), chunk_size):
             end_idx = min(i + chunk_size, len(base_signal))
             chunk = base_signal[i:end_idx].copy()
-            
+
             if zi is not None:
                 y_chunk, zi = lfilter(b, a, chunk, zi=zi)
+
             else:
                 y_chunk = lfilter(b, a, chunk)
+
                 
             output_chunks.append(y_chunk.astype(np.float32))  # Convert to float32
-            
-            # Cleanup
-            del chunk, y_chunk
+
             chunk_count += 1
             
-            # More aggressive garbage collection for large operations
-            if chunk_count % 10 == 0:
-                gc.collect()
-                
-            # Emergency memory check - if we're getting close to limits, force cleanup
-            if chunk_count % 50 == 0:
-                current_memory = check_memory_usage()
-                if current_memory > 800:  # If above 800MB, be more aggressive
-                    print("High memory usage detected, forcing garbage collection")
-                    gc.collect()
-    
+            
+            
+
     print(f"Concatenating {len(output_chunks)} chunks...")
+    print("after concatenating chunks")
     check_memory_usage()
     
     # Concatenate result
     result = np.concatenate(output_chunks)
-    
-    # Final cleanup
-    del output_chunks
-    gc.collect()
-    
+    print("after concatenating chunks")
+
     check_memory_usage()
     return result
 
-def lfilter_chunked(b, a, x, chunk_size=None):
-    """
-    Apply lfilter to a signal in chunks to reduce memory usage.
-    Optimized for memory-constrained environments like Heroku.
-    
-    Args:
-        b: Numerator coefficient array
-        a: Denominator coefficient array  
-        x: Input signal
-        chunk_size: Size of each chunk to process (auto-calculated if None)
-        
-    Returns:
-        Filtered signal
-    """
-    check_memory_usage()
-    
-    # Auto-calculate optimal chunk size if not provided
-    if chunk_size is None:
-        chunk_size = get_optimal_chunk_size(len(x))
-    else:
-        # Use smaller chunk size for very large signals on memory-constrained systems
-        if len(x) > 100000:
-            chunk_size = min(chunk_size, 256)
-        elif len(x) > 50000:
-            chunk_size = min(chunk_size, 512)
-    
-    if len(x) <= chunk_size:
-        # If signal is small enough, use regular lfilter
-        return lfilter(b, a, x)
-    
-    print(f"Processing {len(x)} samples in chunks of {chunk_size}")
-    
-    # Create output as a list of chunks to avoid large array allocation
-    output_chunks = []
-    
-    # Convert input to float32 to save memory
-    x = np.array(x, dtype=np.float32)
-    
-    # Get initial conditions for the filter
-    if len(b) > 1 or (len(a) > 1 and a[0] != 1):
-        zi = lfilter_zi(b, a)
-    else:
-        zi = None
-    
-    # Process signal in chunks
-    for i in range(0, len(x), chunk_size):
-        end_idx = min(i + chunk_size, len(x))
-        chunk = x[i:end_idx].copy()  # Copy to avoid holding reference to large array
-        
-        if zi is not None:
-            # Apply filter with initial conditions
-            y_chunk, zi = lfilter(b, a, chunk, zi=zi)
-        else:
-            # Simple case - no initial conditions needed
-            y_chunk = lfilter(b, a, chunk)
-            
-        output_chunks.append(y_chunk.astype(np.float32))
-        
-        # Explicit cleanup
-        del chunk, y_chunk
-        
-        # More frequent garbage collection for large signals
-        if (i // chunk_size) % 5 == 0:
-            gc.collect()
-            
-        # Memory monitoring for very large operations
-        if (i // chunk_size) % 20 == 0:
-            current_memory = check_memory_usage()
-            if current_memory > 800:
-                print("High memory usage detected during lfilter, forcing cleanup")
-                gc.collect()
-    
-    print(f"Concatenating {len(output_chunks)} filtered chunks...")
-    
-    # Concatenate all chunks
-    result = np.concatenate(output_chunks)
-    
-    # Cleanup
-    del output_chunks
-    gc.collect()
-    
-    check_memory_usage()
-    return result
