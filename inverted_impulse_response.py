@@ -4,6 +4,42 @@ from scipy.fft import fft, ifft, irfft, fftfreq
 from pickle import loads
 from scipy.signal import lfilter, butter, minimum_phase, convolve, fftconvolve, lfilter_zi
 from scipy.interpolate import interp1d
+import gc
+import psutil
+import os
+
+def check_memory_usage():
+    """Monitor memory usage and return current usage in MB"""
+    try:
+        process = psutil.Process(os.getpid())
+        memory_mb = process.memory_info().rss / 1024 / 1024
+        print(f"Current memory usage: {memory_mb:.1f} MB")
+        return memory_mb
+    except:
+        return 0
+
+def get_optimal_chunk_size(signal_length, available_memory_mb=500):
+    """
+    Calculate optimal chunk size based on signal length and available memory.
+    Conservative estimates for Heroku's memory limits.
+    """
+    # Conservative estimate: assume each sample takes 16 bytes in memory during processing
+    bytes_per_sample = 16
+    available_bytes = available_memory_mb * 1024 * 1024 * 0.1  # Use only 10% of available memory
+    
+    max_chunk_size = int(available_bytes / bytes_per_sample)
+    
+    # Clamp to reasonable bounds
+    chunk_size = max(64, min(max_chunk_size, 2048))
+    
+    # For very large signals, use even smaller chunks
+    if signal_length > 1000000:
+        chunk_size = min(chunk_size, 256)
+    elif signal_length > 500000:
+        chunk_size = min(chunk_size, 512)
+    
+    print(f"Calculated optimal chunk size: {chunk_size} for signal length {signal_length}")
+    return chunk_size
 
 def ifft_sym(sig):
     n = len(sig)
@@ -265,7 +301,7 @@ def smooth_spectrum(spectrum, _calibrateSoundSmoothOctaves=1/3,_calibrateSoundSm
     
     return smoothed_spectrum
 
-def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrateSoundSmoothMinBandwidthHz,calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False, chunk_size=8192):
+def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_length, componentIRGains,componentIRFreqs,sampleRate, mls_amplitude, irLength, calibrateSoundSmoothOctaves, calibrateSoundSmoothMinBandwidthHz,calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False, chunk_size=1024):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -292,8 +328,8 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
 
     ####cheap transducer trello
     #Convolve three periods of MLS with IIR. Retain only the middle period.
-    three_mls_periods = np.tile(mls,3)
-    three_mls_periods_convolution = lfilter_chunked(inverse_response_component,1,three_mls_periods,chunk_size)
+    # Use memory-efficient tiling and filtering
+    three_mls_periods_convolution = tile_and_filter_chunked(inverse_response_component, 1, mls, 3, chunk_size)
     period_length = len(mls)
     start_index = period_length
     end_index = start_index + period_length
@@ -371,7 +407,7 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     return_freq = frequencies[:len(frequencies)//2]
     return inverse_response_component.tolist(), smoothed_return_ir.tolist(), return_freq.real.tolist(),inverse_response_no_bandpass.tolist(), ir_pruned.tolist(), component_angle.tolist(), return_ir.tolist(), system_angle.tolist(), attenuatorGain_dB, fMaxHz
 
-def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False, chunk_size=8192):
+def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, sampleRate, mls_amplitude, calibrate_sound_burst_filtered_extra_db, _calibrateSoundIIRPhase, debug=False, chunk_size=1024):
     impulseResponses= impulse_responses_json
     smallest = np.Infinity
     ir = []
@@ -391,8 +427,8 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     mls = np.array(mls)
     ####cheap transducer trello
     #Convolve three periods of MLS with IIR. Retain only the middle period.
-    three_mls_periods = np.tile(mls,3)
-    three_mls_periods_convolution = lfilter_chunked(inverse_response,1,three_mls_periods,chunk_size)
+    # Use memory-efficient tiling and filtering
+    three_mls_periods_convolution = tile_and_filter_chunked(inverse_response, 1, mls, 3, chunk_size)
     period_length = len(mls)
     start_index = period_length
     end_index = start_index + period_length
@@ -453,16 +489,18 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
 
     return inverse_response.tolist(), ir.real.tolist(), inverse_response_no_bandpass.tolist(), attenuatorGain_dB, fMaxHz
 
-def run_convolution_task(inverse_response, mls, inverse_response_no_bandpass, attenuatorGain_dB, mls_amplitude, chunk_size=8192):
+def run_convolution_task(inverse_response, mls, inverse_response_no_bandpass, attenuatorGain_dB, mls_amplitude, chunk_size=1024):
      
     orig_mls = mls
     N = 1 + math.ceil(len(inverse_response)/len(mls))
     print('N: ' + str(N))
-    mls = np.tile(mls,N)
-    print('length of tiled mls: ' + str(len(mls)))
+    print('Original MLS length: ' + str(len(mls)))
+    print('Will tile to total length: ' + str(len(mls) * N))
     print('length of inverse_response: ' + str(len(inverse_response)))
-    convolution = lfilter_chunked(inverse_response,1,mls,chunk_size)
-    convolution_no_bandpass = lfilter_chunked(inverse_response_no_bandpass,1,mls,chunk_size)
+    
+    # Use memory-efficient tiling and filtering to avoid creating huge arrays
+    convolution = tile_and_filter_chunked(inverse_response, 1, mls, N, chunk_size)
+    convolution_no_bandpass = tile_and_filter_chunked(inverse_response_no_bandpass, 1, mls, N, chunk_size)
 
     print('length of original convolution: ' + str(len(convolution)))
     trimmed_convolution = convolution[(len(orig_mls)*(N-1)):]
@@ -523,25 +561,130 @@ def run_ir_convolution_task(input_signal, microphone_ir, loudspeaker_ir, sample_
     
     return output_signal.tolist()
 
-def lfilter_chunked(b, a, x, chunk_size=8192):
+def tile_and_filter_chunked(b, a, base_signal, repetitions, chunk_size=None):
+    """
+    Memory-efficient version of tiling a signal and applying lfilter.
+    Instead of creating the full tiled array, processes it in chunks.
+    
+    Args:
+        b: Numerator coefficient array
+        a: Denominator coefficient array
+        base_signal: The signal to tile and filter
+        repetitions: Number of times to repeat the signal
+        chunk_size: Processing chunk size (auto-calculated if None)
+        
+    Returns:
+        Filtered tiled signal
+    """
+    check_memory_usage()
+    
+    total_length = len(base_signal) * repetitions
+    
+    # Auto-calculate optimal chunk size if not provided
+    if chunk_size is None:
+        chunk_size = get_optimal_chunk_size(total_length)
+    else:
+        # Still apply adaptive sizing for very large signals
+        if total_length > 1000000:
+            chunk_size = min(chunk_size, 128)
+        elif total_length > 500000:
+            chunk_size = min(chunk_size, 256)
+    
+    print(f"Tiling signal {len(base_signal)} samples x {repetitions} times (total: {total_length})")
+    print(f"Processing in chunks of {chunk_size}")
+    
+    # Get initial conditions for the filter
+    if len(b) > 1 or (len(a) > 1 and a[0] != 1):
+        zi = lfilter_zi(b, a)
+    else:
+        zi = None
+    
+    output_chunks = []
+    base_signal = np.array(base_signal, dtype=np.float32)  # Use float32 to save memory
+    
+    chunk_count = 0
+    
+    # Process each repetition in chunks
+    for rep in range(repetitions):
+        if rep % 10 == 0:
+            check_memory_usage()
+            
+        for i in range(0, len(base_signal), chunk_size):
+            end_idx = min(i + chunk_size, len(base_signal))
+            chunk = base_signal[i:end_idx].copy()
+            
+            if zi is not None:
+                y_chunk, zi = lfilter(b, a, chunk, zi=zi)
+            else:
+                y_chunk = lfilter(b, a, chunk)
+                
+            output_chunks.append(y_chunk.astype(np.float32))  # Convert to float32
+            
+            # Cleanup
+            del chunk, y_chunk
+            chunk_count += 1
+            
+            # More aggressive garbage collection for large operations
+            if chunk_count % 10 == 0:
+                gc.collect()
+                
+            # Emergency memory check - if we're getting close to limits, force cleanup
+            if chunk_count % 50 == 0:
+                current_memory = check_memory_usage()
+                if current_memory > 800:  # If above 800MB, be more aggressive
+                    print("High memory usage detected, forcing garbage collection")
+                    gc.collect()
+    
+    print(f"Concatenating {len(output_chunks)} chunks...")
+    check_memory_usage()
+    
+    # Concatenate result
+    result = np.concatenate(output_chunks)
+    
+    # Final cleanup
+    del output_chunks
+    gc.collect()
+    
+    check_memory_usage()
+    return result
+
+def lfilter_chunked(b, a, x, chunk_size=None):
     """
     Apply lfilter to a signal in chunks to reduce memory usage.
+    Optimized for memory-constrained environments like Heroku.
     
     Args:
         b: Numerator coefficient array
         a: Denominator coefficient array  
         x: Input signal
-        chunk_size: Size of each chunk to process
+        chunk_size: Size of each chunk to process (auto-calculated if None)
         
     Returns:
         Filtered signal
     """
+    check_memory_usage()
+    
+    # Auto-calculate optimal chunk size if not provided
+    if chunk_size is None:
+        chunk_size = get_optimal_chunk_size(len(x))
+    else:
+        # Use smaller chunk size for very large signals on memory-constrained systems
+        if len(x) > 100000:
+            chunk_size = min(chunk_size, 256)
+        elif len(x) > 50000:
+            chunk_size = min(chunk_size, 512)
+    
     if len(x) <= chunk_size:
         # If signal is small enough, use regular lfilter
         return lfilter(b, a, x)
     
-    # Initialize output array
-    y = np.zeros_like(x)
+    print(f"Processing {len(x)} samples in chunks of {chunk_size}")
+    
+    # Create output as a list of chunks to avoid large array allocation
+    output_chunks = []
+    
+    # Convert input to float32 to save memory
+    x = np.array(x, dtype=np.float32)
     
     # Get initial conditions for the filter
     if len(b) > 1 or (len(a) > 1 and a[0] != 1):
@@ -552,7 +695,7 @@ def lfilter_chunked(b, a, x, chunk_size=8192):
     # Process signal in chunks
     for i in range(0, len(x), chunk_size):
         end_idx = min(i + chunk_size, len(x))
-        chunk = x[i:end_idx]
+        chunk = x[i:end_idx].copy()  # Copy to avoid holding reference to large array
         
         if zi is not None:
             # Apply filter with initial conditions
@@ -561,6 +704,30 @@ def lfilter_chunked(b, a, x, chunk_size=8192):
             # Simple case - no initial conditions needed
             y_chunk = lfilter(b, a, chunk)
             
-        y[i:end_idx] = y_chunk
+        output_chunks.append(y_chunk.astype(np.float32))
+        
+        # Explicit cleanup
+        del chunk, y_chunk
+        
+        # More frequent garbage collection for large signals
+        if (i // chunk_size) % 5 == 0:
+            gc.collect()
+            
+        # Memory monitoring for very large operations
+        if (i // chunk_size) % 20 == 0:
+            current_memory = check_memory_usage()
+            if current_memory > 800:
+                print("High memory usage detected during lfilter, forcing cleanup")
+                gc.collect()
     
-    return y
+    print(f"Concatenating {len(output_chunks)} filtered chunks...")
+    
+    # Concatenate all chunks
+    result = np.concatenate(output_chunks)
+    
+    # Cleanup
+    del output_chunks
+    gc.collect()
+    
+    check_memory_usage()
+    return result
