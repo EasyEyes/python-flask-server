@@ -352,7 +352,7 @@ def handle_background_psd_task(request_json,task):
     background_rec = request_json["background_rec"]
     sampleRate = request_json["sampleRate"]
 
-    [y_background, x_background] = plt.psd(background_rec,Fs=sampleRate,NFFT=2048,scale_by_freq=False)
+    [y_background, x_background] = plt.psd(background_rec,Fs=sampleRate,NFFT=2048,scale_by_freq=False, window=plt.mlab.window_none)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"================ handle_background_psd task, time taken: {elapsed_time}s ================")
@@ -414,7 +414,7 @@ def handle_subtracted_psd_task(request_json,task):
     # knownFreq = request_json["knownFrequencies"]
     sample_rate = request_json["sampleRate"]
  
-    [y, x] = plt.psd(rec,Fs=sample_rate,NFFT=2048,scale_by_freq=False)
+    [y, x] = plt.psd(rec,Fs=sample_rate,NFFT=2048,scale_by_freq=False, window=plt.mlab.window_none)
     #[x_conv,y_conv] = plt.psd(rec_conv, Fs=96000, scale_by_freq=False)
     end_time = time.time()
     elapsed_time = end_time - start_time
