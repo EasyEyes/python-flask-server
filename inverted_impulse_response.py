@@ -81,15 +81,18 @@ def compute_filter_g(h):
 
 
 def limitInverseResponseBandwidth(inverse_spectrum, fs, limit_ranges):
-    frequencies = np.linspace(0,fs,len(inverse_spectrum)+1)[:-1]
-    # set gain of freqs below and above the limits to 0. Note it's a two sided spectrum
-    for i,freq in enumerate(frequencies):
-        cond1 = (freq < limit_ranges[0]) or (freq > frequencies[-1] - limit_ranges[0])
-        cond2 = (freq > limit_ranges[1]) and (freq < frequencies[-1] - limit_ranges[1])
-        if cond1 or cond2:
-            inverse_spectrum[i] = 0.
+    # Compute proper frequency bins (includes negative freqs)
+    frequencies = np.fft.fftfreq(len(inverse_spectrum), d=1/fs)
+    
+    f_low, f_high = limit_ranges
+    
+    # Create mask: True where frequency is inside the passband
+    mask = (np.abs(frequencies) >= f_low) & (np.abs(frequencies) <= f_high)
+    
+    # Zero out components outside the band
+    inverse_spectrum[~mask] = 0.0
 
-    return inverse_spectrum #add inverse_spectrum
+    return inverse_spectrum
 
 def scaleInverseResponse(inverse_ir, inverse_spectrum, fs, targetHz=1000):
 
@@ -319,6 +322,9 @@ def run_component_iir_task(impulse_responses_json, mls, lowHz, highHz, iir_lengt
     componentIRGains = np.array(componentIRGains)
     ir_component, angle, system_angle = splitter(ir, componentIRFreqs, componentIRGains, componentIRDeg, sampleRate)
 
+    if mls_amplitude != 0:
+        ir_component = ir_component * mls_amplitude
+
     #have my IR here, subtract the microphone/louadspeaker ir from this?
     inverse_response_component = calculateInverseIR(ir_component,lowHz,highHz,_calibrateSoundIIRPhase,iir_length, sampleRate)
     inverse_response_no_bandpass = calculateInverseIRNoFilter(ir_component,_calibrateSoundIIRPhase,iir_length,sampleRate)
@@ -420,6 +426,10 @@ def run_system_iir_task(impulse_responses_json, mls, lowHz, iir_length, highHz, 
     else:
         ir = np.array(impulseResponses)
         ir = ir.reshape((ir.shape[1],))
+
+    if mls_amplitude != 0:
+        ir = ir * mls_amplitude
+
     inverse_response= calculateInverseIR(ir,lowHz,highHz, _calibrateSoundIIRPhase,iir_length,sampleRate)
     inverse_response_no_bandpass = calculateInverseIRNoFilter(ir,_calibrateSoundIIRPhase, iir_length,sampleRate)
 
