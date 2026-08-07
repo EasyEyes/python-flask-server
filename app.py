@@ -1,4 +1,5 @@
 import os
+import hmac
 import tracemalloc
 import gc
 import psutil
@@ -8,8 +9,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
 import time
-from flask import Flask, request, make_response
-from flask_cors import CORS, cross_origin
+from flask import Flask, request, make_response, abort
+from flask_cors import CORS
 from impulse_response import run_ir_task, estimate_samples_per_mls_, adjust_mls_length, compute_impulse_resp, impulse_to_frequency_response
 from inverted_impulse_response import run_component_iir_task, run_system_iir_task, run_convolution_task, run_ir_convolution_task, frequency_response_to_impulse_response
 from volume import run_volume_task,run_volume_task_nonlinear
@@ -20,11 +21,76 @@ from scipy.fft import fft
 from utils import allHzPowerCheck, volumePowerCheck
 import math
 
+MAX_JSON_DEPTH = 20
+MAX_JSON_VALUES = 2_000_000
+
 app = Flask(__name__)
-CORS(app, resources = {r"/*": {"origins": "*"}})
+app.config["MAX_CONTENT_LENGTH"] = int(
+    os.getenv("EASYEYES_MAX_CONTENT_LENGTH", str(32 * 1024 * 1024))
+)
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("EASYEYES_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+CORS(
+    app,
+    resources={
+        r"/task/*": {"origins": allowed_origins, "methods": ["POST"]},
+        r"/model/*": {"origins": allowed_origins, "methods": ["GET"]},
+    },
+)
 
 process = psutil.Process(os.getpid())
 tracemalloc.start()
+baseline_snapshot = None
+
+
+def require_diagnostics_token():
+    configured_token = os.getenv("EASYEYES_DIAGNOSTICS_TOKEN", "")
+    if not configured_token:
+        abort(404)
+
+    authorization = request.headers.get("Authorization", "")
+    provided_token = (
+        authorization.removeprefix("Bearer ")
+        if authorization.startswith("Bearer ")
+        else ""
+    )
+    if not hmac.compare_digest(provided_token, configured_token):
+        abort(401)
+
+
+def is_valid_task_payload(payload):
+    if not isinstance(payload, dict):
+        return False
+
+    pending = [(payload, 0)]
+    value_count = 0
+
+    while pending:
+        value, depth = pending.pop()
+        if depth > MAX_JSON_DEPTH:
+            return False
+
+        if isinstance(value, dict):
+            if not all(isinstance(key, str) for key in value):
+                return False
+            value_count += len(value)
+            pending.extend((item, depth + 1) for item in value.values())
+        elif isinstance(value, list):
+            value_count += len(value)
+            pending.extend((item, depth + 1) for item in value)
+        elif isinstance(value, float) and not math.isfinite(value):
+            return False
+        elif not isinstance(value, (str, int, float, bool, type(None))):
+            return False
+
+        if value_count > MAX_JSON_VALUES:
+            return False
+
+    return True
 
 
 def handle_autocorrelation_task(request_json, task):
@@ -551,45 +617,49 @@ def print_memory_usage():
     print("memory used:", round(process.memory_info().rss / 1024 ** 2), "mb")
 
 @app.route("/task/<string:task>", methods=['POST'])
-@cross_origin()
 def task_handler(task):
     print_memory_usage()
     gc.collect()
     if task not in SUPPORTED_TASKS:
-        return 'ERROR'
-    content_type = request.headers.get('Content-Type')
-    if (content_type == 'application/json'):
+        abort(404)
+    if request.is_json:
         headers = {"Content-Type": "application/json"}
-        status, result = SUPPORTED_TASKS[task](request.get_json(cache=False), task)
-        request.data
+        request_json = request.get_json(cache=False)
+        if not is_valid_task_payload(request_json):
+            return {"error": "Invalid JSON task payload"}, 400
+        try:
+            status, result = SUPPORTED_TASKS[task](request_json, task)
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return {"error": "Invalid task parameters"}, 400
         resp = make_response(result, status)
-        resp.headers = headers
+        resp.headers.update(headers)
         print_memory_usage()
         return resp
     else:
-        return 'Content-Type not supported'
+        return {"error": "Content-Type must be application/json"}, 415
     
 @app.route('/memory', methods=['POST'])
-@cross_origin()
 def print_memory():
+    require_diagnostics_token()
     return {'memory': process.memory_info().rss / 1024 ** 2}    
 
 @app.route("/snapshot")
-@cross_origin()
-def snap():
-    global s
-    if not s:
-        s = tracemalloc.take_snapshot()
+def create_or_compare_snapshot():
+    global baseline_snapshot
+    require_diagnostics_token()
+    if not baseline_snapshot:
+        baseline_snapshot = tracemalloc.take_snapshot()
         return "taken snapshot\n"
     else:
         lines = []
-        top_stats = tracemalloc.take_snapshot().compare_to(s, 'lineno')
+        top_stats = tracemalloc.take_snapshot().compare_to(
+            baseline_snapshot, 'lineno'
+        )
         for stat in top_stats[:5]:
             lines.append(str(stat))
         return "\n".join(lines)
     
 @app.route("/model/faceDetect")
-@cross_origin()
 def face_detect():
     # load and return the JSON File: mediapipe_tfjs_model_face_detection_full.json
     with open('mediapipe_tfjs_model_face_detection_full.json') as f:
