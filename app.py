@@ -1,4 +1,5 @@
 import os
+import hmac
 import tracemalloc
 import gc
 import psutil
@@ -8,8 +9,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Agg")
 import time
-from flask import Flask, request, make_response
-from flask_cors import CORS, cross_origin
+from flask import Flask, request, make_response, abort
+from flask_cors import CORS
 from impulse_response import run_ir_task, estimate_samples_per_mls_, adjust_mls_length, compute_impulse_resp, impulse_to_frequency_response
 from inverted_impulse_response import run_component_iir_task, run_system_iir_task, run_convolution_task, run_ir_convolution_task, frequency_response_to_impulse_response
 from volume import run_volume_task,run_volume_task_nonlinear
@@ -21,10 +22,41 @@ from utils import allHzPowerCheck, volumePowerCheck
 import math
 
 app = Flask(__name__)
-CORS(app, resources = {r"/*": {"origins": "*"}})
+app.config["MAX_CONTENT_LENGTH"] = int(
+    os.getenv("EASYEYES_MAX_CONTENT_LENGTH", str(32 * 1024 * 1024))
+)
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("EASYEYES_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+CORS(
+    app,
+    resources={
+        r"/task/*": {"origins": allowed_origins, "methods": ["POST"]},
+        r"/model/*": {"origins": allowed_origins, "methods": ["GET"]},
+    },
+)
 
 process = psutil.Process(os.getpid())
 tracemalloc.start()
+s = None
+
+
+def require_diagnostics_token():
+    configured_token = os.getenv("EASYEYES_DIAGNOSTICS_TOKEN", "")
+    if not configured_token:
+        abort(404)
+
+    authorization = request.headers.get("Authorization", "")
+    provided_token = (
+        authorization.removeprefix("Bearer ")
+        if authorization.startswith("Bearer ")
+        else ""
+    )
+    if not hmac.compare_digest(provided_token, configured_token):
+        abort(401)
 
 
 def handle_autocorrelation_task(request_json, task):
@@ -551,33 +583,30 @@ def print_memory_usage():
     print("memory used:", round(process.memory_info().rss / 1024 ** 2), "mb")
 
 @app.route("/task/<string:task>", methods=['POST'])
-@cross_origin()
 def task_handler(task):
     print_memory_usage()
     gc.collect()
     if task not in SUPPORTED_TASKS:
-        return 'ERROR'
-    content_type = request.headers.get('Content-Type')
-    if (content_type == 'application/json'):
+        abort(404)
+    if request.is_json:
         headers = {"Content-Type": "application/json"}
         status, result = SUPPORTED_TASKS[task](request.get_json(cache=False), task)
-        request.data
         resp = make_response(result, status)
-        resp.headers = headers
+        resp.headers.update(headers)
         print_memory_usage()
         return resp
     else:
-        return 'Content-Type not supported'
+        return {"error": "Content-Type must be application/json"}, 415
     
 @app.route('/memory', methods=['POST'])
-@cross_origin()
 def print_memory():
+    require_diagnostics_token()
     return {'memory': process.memory_info().rss / 1024 ** 2}    
 
 @app.route("/snapshot")
-@cross_origin()
 def snap():
     global s
+    require_diagnostics_token()
     if not s:
         s = tracemalloc.take_snapshot()
         return "taken snapshot\n"
@@ -589,7 +618,6 @@ def snap():
         return "\n".join(lines)
     
 @app.route("/model/faceDetect")
-@cross_origin()
 def face_detect():
     # load and return the JSON File: mediapipe_tfjs_model_face_detection_full.json
     with open('mediapipe_tfjs_model_face_detection_full.json') as f:
