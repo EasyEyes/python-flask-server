@@ -21,6 +21,9 @@ from scipy.fft import fft
 from utils import allHzPowerCheck, volumePowerCheck
 import math
 
+MAX_JSON_DEPTH = 20
+MAX_JSON_VALUES = 2_000_000
+
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = int(
     os.getenv("EASYEYES_MAX_CONTENT_LENGTH", str(32 * 1024 * 1024))
@@ -41,7 +44,7 @@ CORS(
 
 process = psutil.Process(os.getpid())
 tracemalloc.start()
-s = None
+baseline_snapshot = None
 
 
 def require_diagnostics_token():
@@ -57,6 +60,37 @@ def require_diagnostics_token():
     )
     if not hmac.compare_digest(provided_token, configured_token):
         abort(401)
+
+
+def is_valid_task_payload(payload):
+    if not isinstance(payload, dict):
+        return False
+
+    pending = [(payload, 0)]
+    value_count = 0
+
+    while pending:
+        value, depth = pending.pop()
+        if depth > MAX_JSON_DEPTH:
+            return False
+
+        if isinstance(value, dict):
+            if not all(isinstance(key, str) for key in value):
+                return False
+            value_count += len(value)
+            pending.extend((item, depth + 1) for item in value.values())
+        elif isinstance(value, list):
+            value_count += len(value)
+            pending.extend((item, depth + 1) for item in value)
+        elif isinstance(value, float) and not math.isfinite(value):
+            return False
+        elif not isinstance(value, (str, int, float, bool, type(None))):
+            return False
+
+        if value_count > MAX_JSON_VALUES:
+            return False
+
+    return True
 
 
 def handle_autocorrelation_task(request_json, task):
@@ -590,7 +624,13 @@ def task_handler(task):
         abort(404)
     if request.is_json:
         headers = {"Content-Type": "application/json"}
-        status, result = SUPPORTED_TASKS[task](request.get_json(cache=False), task)
+        request_json = request.get_json(cache=False)
+        if not is_valid_task_payload(request_json):
+            return {"error": "Invalid JSON task payload"}, 400
+        try:
+            status, result = SUPPORTED_TASKS[task](request_json, task)
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return {"error": "Invalid task parameters"}, 400
         resp = make_response(result, status)
         resp.headers.update(headers)
         print_memory_usage()
@@ -604,15 +644,17 @@ def print_memory():
     return {'memory': process.memory_info().rss / 1024 ** 2}    
 
 @app.route("/snapshot")
-def snap():
-    global s
+def create_or_compare_snapshot():
+    global baseline_snapshot
     require_diagnostics_token()
-    if not s:
-        s = tracemalloc.take_snapshot()
+    if not baseline_snapshot:
+        baseline_snapshot = tracemalloc.take_snapshot()
         return "taken snapshot\n"
     else:
         lines = []
-        top_stats = tracemalloc.take_snapshot().compare_to(s, 'lineno')
+        top_stats = tracemalloc.take_snapshot().compare_to(
+            baseline_snapshot, 'lineno'
+        )
         for stat in top_stats[:5]:
             lines.append(str(stat))
         return "\n".join(lines)

@@ -28,7 +28,13 @@ python -m pip_audit --local
   memory use.
 - `EASYEYES_DIAGNOSTICS_TOKEN`: bearer token for `/memory` and `/snapshot`.
   Those routes return `404` when no token is configured and `401` for an
-  incorrect token.
+incorrect token.
+
+Task payloads must be JSON objects containing only finite numbers and ordinary
+JSON values. Nesting and total value counts are bounded before scientific
+handlers run. Missing or invalid task parameters return `400` instead of an
+internal error. Task-specific numeric ranges still need to be documented and
+enforced.
 
 Task routes remain an unauthenticated computation API because the active
 client contract does not provide an identity mechanism. Before deploying this
